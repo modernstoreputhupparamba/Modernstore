@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
+import 'package:shimmer/shimmer.dart';
 
 class OrderHistory extends StatefulWidget {
   const OrderHistory({super.key});
@@ -11,25 +14,11 @@ class OrderHistory extends StatefulWidget {
 }
 
 class _OrderHistoryState extends State<OrderHistory> {
-  // Sample data for the order history
-  final List<Map<String, String>> orderHistoryData = [
-    {
-      'invoiceNumber': 'GR/KTK/025',
-      'date': '26/03/2025 10:00 AM',
-      'name': 'Adhil PM',
-      'qty': '4',
-      'amount': '510.00',
-      'orderDetails': 'Order Details',
-    },
-    {
-      'invoiceNumber': 'GR/KTK/026',
-      'date': '25/03/2025 09:00 AM',
-      'name': 'John Doe',
-      'qty': '2',
-      'amount': '250.00',
-      'orderDetails': 'Order Details',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    context.read<GetAllOrdersBloc>().add(FetchGetAllOrders());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +31,7 @@ class _OrderHistoryState extends State<OrderHistory> {
           SizedBox(height: 40.h),
           _buildSearchBar(),
           SizedBox(height: 20.h),
-          _buildOrderHistoryList(),
+          _buildOrderHistoryBloc(),
         ],
       ),
     );
@@ -91,115 +80,162 @@ class _OrderHistoryState extends State<OrderHistory> {
               ),
             ),
           ),
-          SvgPicture.asset('assets/filter.svg')
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: SvgPicture.asset('assets/filter.svg'),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildOrderHistoryList() {
-    return Expanded(
-      child: ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-        itemCount: orderHistoryData.length,
-        itemBuilder: (context, index) {
-          final order = orderHistoryData[index];
-          return Card(
-            color: Colors.white.withOpacity(0.1),
-            margin: EdgeInsets.only(bottom: 16.h),
-            child: Padding(
-              padding: EdgeInsets.all(16.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Invoice Number and Date
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Invoice Number: ${order['invoiceNumber']}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        order['date']!,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  // Name
-                  Text(
-                    'Name: ${order['name']}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  // Quantity and Amount
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Qty: ${order['qty']}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                      Text(
-                        'Amount: \$${order['amount']}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 10.h),
-                  // Order Details
-                  Text(
-                    'Order Details: ${order['orderDetails']}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                  SizedBox(height: 10.h),
-                  // Print Button
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Add print functionality here
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 20.w, vertical: 10.h),
-                      ),
-                      child: Text(
-                        'Print',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+  Widget _buildOrderHistoryBloc() {
+    return BlocBuilder<GetAllOrdersBloc, GetAllOrdersState>(
+      builder: (context, state) {
+        if (state is GetAllOrdersLoading) {
+          return Expanded(
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[900]!,
+              highlightColor: Colors.grey[800]!,
+              child: ListView.builder(
+                itemCount: 5,
+                itemBuilder: (context, index) => Card(
+                  color: Colors.white.withOpacity(0.1),
+                  margin:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  child: SizedBox(height: 150.h),
+                ),
               ),
             ),
           );
-        },
-      ),
+        }
+
+        if (state is GetAllOrdersError) {
+          return Center(
+            child: Text(
+              'Failed to load orders: ${state.message}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        if (state is GetAllOrdersLoaded) {
+          final orders = state.getAllOrdersModel.orders ?? [];
+          if (orders.isEmpty) {
+            return const Center(
+              child: Text(
+                'No orders found.',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          }
+          return Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                return Card(
+                  color: Colors.white.withOpacity(0.1),
+                  margin: EdgeInsets.only(bottom: 16.h),
+                  child: Padding(
+                    padding: EdgeInsets.all(16.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Invoice Number and Date
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Invoice: #${order.id?.substring(0, 8) ?? 'N/A'}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              order.createdAt?.toString().substring(0, 16) ?? '',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        // Name
+                        Text(
+                          'Name: ${order.userId?.name ?? 'Unknown User'}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                        SizedBox(height: 10.h),
+                        // Quantity and Amount
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Items: ${order.orderItems?.length ?? 0}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                            Text(
+                              'Amount: ₹${order.finalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        // Order Details
+                        Text(
+                          'Status: ${order.orderStatus ?? 'N/A'}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                        SizedBox(height: 10.h),
+                        // Print Button
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Add print functionality here
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 20.w, vertical: 10.h),
+                            ),
+                            child: Text(
+                              'Print',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14.sp,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+        return const Center(
+            child: Text('No orders yet.', style: TextStyle(color: Colors.white)));
+      },
     );
   }
 }

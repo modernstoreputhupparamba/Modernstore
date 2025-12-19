@@ -8,24 +8,18 @@ part 'userdeliveryaddress_state.dart';
 
 class UserdeliveryaddressBloc
     extends Bloc<UserdeliveryaddressEvent, UserdeliveryaddressState> {
-  GetUserDeliveryAddressesApi getUserDlvAddressesapi = GetUserDeliveryAddressesApi();
-  late GetUserDlvAddresses getUserDlvAddresses;
+  final GetUserDeliveryAddressesApi api = GetUserDeliveryAddressesApi();
 
-  UserdeliveryaddressBloc() : super(UserdeliveryaddressInitial()) {
-    on<fetchUserdeliveryaddressEvent>((event, emit) async {
-      emit(UserdeliveryaddressLoading());
+  UserdeliveryaddressBloc() : super(const UserdeliveryaddressInitial()) {
+    on<FetchUserdeliveryaddressEvent>((event, emit) async {
+      emit(const UserdeliveryaddressLoading());
 
       try {
-        getUserDlvAddresses =
-            await getUserDlvAddressesapi.getGetUserDlvAddresses();
-        emit(UserdeliveryaddressLoaded());
+        final response = await api.getGetUserDlvAddresses();
+
+        emit(UserdeliveryaddressLoaded(response));
       } catch (e) {
-        print('UserDeliveryAddress Error: $e');
-        // Check if it's a token error
-        if (e.toString().contains('401') || e.toString().contains('Invalid token')) {
-          print('Token is invalid or expired for delivery addresses');
-        }
-        emit(UserdeliveryaddressError());
+        emit(UserdeliveryaddressError(e.toString()));
       }
     });
   }

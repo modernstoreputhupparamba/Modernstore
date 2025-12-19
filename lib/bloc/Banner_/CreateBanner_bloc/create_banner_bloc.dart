@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:modern_grocery/repositery/api/banner/CreateBanner_api.dart';
 import 'package:modern_grocery/repositery/model/Banner/CreateBanner_model.dart';
@@ -19,8 +21,8 @@ class CreateBannerBloc extends Bloc<CreateBannerEvent, CreateBannerState> {
           type: event.type,
           categoryId: event.categoryId,
           link: event.link,
-          imagePath: event.imagePath,
-          onSendProgress: event.onSendProgress,
+          imageFile: event.imagePath,        // ✅ File -> File
+          onSendProgress: event.onSendProgress, // ❗ but unused in API
         );
         emit(CreateBannerLoaded(result: result));
       } catch (e) {
@@ -29,3 +31,4 @@ class CreateBannerBloc extends Bloc<CreateBannerEvent, CreateBannerState> {
     });
   }
 }
+

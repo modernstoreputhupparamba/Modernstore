@@ -10,6 +10,8 @@ import 'package:modern_grocery/ui/settings/language_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'my_address_page.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -112,18 +114,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   }),
                   buildListTile(Icons.location_on,
                       languageService.getString("my_address"), onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          languageService.getString("address_coming"),
-                          style: GoogleFonts.poppins(
-                            color: Color(0x80000000),
-                          ),
-                        ),
-                        backgroundColor: const Color(0xFFF5E9B5),
-                      ),
-                    );
-                  }),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const MyAddressPage()),
+                        );
+                      }),
                   buildListTile(
                       Icons.language, languageService.getString("language"),
                       onTap: () {

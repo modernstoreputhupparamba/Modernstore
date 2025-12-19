@@ -6,9 +6,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:modern_grocery/bloc/Categories_/GetAllCategories/get_all_categories_bloc.dart';
 
+import 'package:modern_grocery/ui/products/Product_list.dart';
 import 'package:modern_grocery/bloc/Categories_/createCategory/create_category_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path/path.dart' as p;
+import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+import '../../bloc/Categories_/Edit_category/edit_category_bloc.dart';
 
 // Assuming Category is a class within GetAllCategoriesModel
 class Category {
@@ -29,21 +34,47 @@ class _AdminCategoryState extends State<AdminCategory> {
   @override
   void initState() {
     super.initState();
-
     BlocProvider.of<GetAllCategoriesBloc>(context).add(fetchGetAllCategories());
-    ;
+    _searchController.addListener(_onSearchChanged);
   }
 
   File? _image;
   String? _imageFileType;
   final ImagePicker _picker = ImagePicker();
+  String? _networkImageUrl;
   bool _isUploading = false;
+
+  // Controllers and state for search
   final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+  List<dynamic> _allCategories = [];
+  List<dynamic> _filteredCategories = [];
 
   @override
   void dispose() {
     _categoryController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _filterCategories(_searchController.text);
+  }
+
+  void _filterCategories(String query) {
+    final lowerCaseQuery = query.toLowerCase();
+
+    setState(() {
+      if (lowerCaseQuery.isEmpty) {
+        _filteredCategories = List.from(_allCategories);
+      } else {
+        _filteredCategories = _allCategories.where((category) {
+          final name = (category.name ?? '').toString().toLowerCase();
+          return name.contains(lowerCaseQuery);
+        }).toList();
+      }
+    });
   }
 
   Future<bool> _requestImagePermission() async {
@@ -109,6 +140,7 @@ class _AdminCategoryState extends State<AdminCategory> {
   void _resetForm() {
     setState(() {
       _image = null;
+      _networkImageUrl = null;
       _categoryController.clear();
       _isUploading = false;
     });
@@ -169,6 +201,7 @@ class _AdminCategoryState extends State<AdminCategory> {
 
   Widget _buildSearchField() {
     return TextField(
+      controller: _searchController,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: 'Search here',
@@ -199,7 +232,7 @@ class _AdminCategoryState extends State<AdminCategory> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
-        onPressed: _showAddCategoryDialog,
+        onPressed: () => _showAddCategoryDialog(),
         icon: const Icon(Icons.add_circle_outline,
             color: Colors.black, semanticLabel: 'Add'),
         label: const Text('Add Category'),
@@ -207,29 +240,77 @@ class _AdminCategoryState extends State<AdminCategory> {
     );
   }
 
-  void _showAddCategoryDialog() {
-    showDialog(
-      context: context,
-      builder: (context) =>
+  void _showAddCategoryDialog({dynamic categoryData}) {
+  // Pre-fill form if editing
+  if (categoryData != null) {
+    _categoryController.text = categoryData.name ?? '';
+    _networkImageUrl = categoryData.image;
+    _image = null; // Clear local image when editing
+  } else {
+    // Clear form if adding
+    _resetForm();
+  }
+
+  // Keep a reference to the parent context (State's context)
+  final parentContext = context;
+
+  showDialog(
+    context: parentContext,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return MultiBlocListener(
+        listeners: [
+          /// CREATE CATEGORY LISTENER
           BlocListener<CreateCategoryBloc, CreateCategoryState>(
-        listener: (context, state) {
-          if (state is CreateCategoryLoaded) {
-            _resetForm();
-            Navigator.of(context).pop();
-            _showSnackBar('Category created successfully', Colors.green);
-            // Refresh categories
-            BlocProvider.of<GetAllCategoriesBloc>(context)
-                .add(fetchGetAllCategories());
-          } else if (state is CreateCategoryError) {
-            setState(() => _isUploading = false);
-            _showSnackBar(
-                'Failed to create category: ${state.message}', Colors.red);
-          }
-        },
+            listener: (ctx, state) {
+              if (state is CreateCategoryLoaded) {
+                _resetForm();
+                Navigator.of(dialogContext).pop(); // Close the dialog
+                _showSnackBar('Category created successfully', Colors.green);
+
+                // Refresh categories
+                ctx.read<GetAllCategoriesBloc>().add(fetchGetAllCategories());
+              } else if (state is CreateCategoryError) {
+                setState(() => _isUploading = false);
+                _showSnackBar(
+                  'Failed to create category: ${state.message}',
+                  Colors.red,
+                );
+              }
+            },
+          ),
+
+          /// EDIT CATEGORY LISTENER
+          BlocListener<EditCategoryBloc, EditCategoryState>(
+            listener: (ctx, state) {
+              if (state is EditCategorySuccess) {
+                _resetForm();
+                Navigator.of(dialogContext).pop();
+                _showSnackBar(
+                    'Category updated successfully', Colors.green);
+
+                ctx
+                    .read<GetAllCategoriesBloc>()
+                    .add(fetchGetAllCategories());
+              } else if (state is EditCategoryFailure) {
+                setState(() => _isUploading = false);
+                _showSnackBar(
+                  'Failed to update category: ${state.error}',
+                  Colors.red,
+                );
+              }
+            },
+          ),
+        ],
+
+        /// THE ACTUAL DIALOG UI
         child: AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-          title: const Text('Add New Category'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          title: Text(
+            categoryData == null ? 'Add New Category' : 'Edit Category',
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -242,13 +323,17 @@ class _AdminCategoryState extends State<AdminCategory> {
                 SizedBox(height: 8.h),
                 TextField(
                   controller: _categoryController,
+                  onChanged: (_) {
+                    // To update errorText when typing
+                    setState(() {});
+                  },
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     hintText: 'Enter category name',
-                    errorText:
-                        _categoryController.text.trim().isEmpty && _isUploading
-                            ? 'Category name is required'
-                            : null,
+                    errorText: _categoryController.text.trim().isEmpty &&
+                            _isUploading
+                        ? 'Category name is required'
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -260,34 +345,49 @@ class _AdminCategoryState extends State<AdminCategory> {
                 InkWell(
                   onTap: _pickImage,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    height: 120.h,
+                    width: double.infinity,
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[200],
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.image,
-                            color: Colors.blue, semanticLabel: 'Image'),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _image != null
-                                ? p.basename(_image!.path)
-                                : 'Select an image',
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color:
-                                  _image != null ? Colors.black : Colors.grey,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: _image != null
+                          ? Image.file(_image!, fit: BoxFit.cover)
+                          : (_networkImageUrl != null
+                              ? CachedNetworkImage(
+                                  imageUrl: _networkImageUrl!,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) =>
+                                      const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                  errorWidget: (context, url, error) =>
+                                      const Icon(Icons.error),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_photo_alternate_outlined,
+                                      color: Colors.grey[600],
+                                    ),
+                                    SizedBox(height: 4.h),
+                                    Text(
+                                      'Click to select image',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ],
+                                )),
                     ),
                   ),
                 ),
-                if (_isUploading && _image == null)
+                if (_isUploading && _image == null && _networkImageUrl == null)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
@@ -301,18 +401,23 @@ class _AdminCategoryState extends State<AdminCategory> {
           actions: [
             TextButton(
               onPressed: () {
-                _resetForm();
-                Navigator.of(context).pop();
+                Navigator.of(dialogContext).pop();
+                _resetForm(); // Reset on cancel
               },
-              child: const Text('Cancel', style: TextStyle(color: Colors.blue)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.blue),
+              ),
             ),
             ElevatedButton(
-              onPressed: _handleCategorySubmission,
+              onPressed: () =>
+                  _handleCategorySubmission(categoryData: categoryData),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFFF1C5),
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24)),
+                  borderRadius: BorderRadius.circular(24),
+                ),
               ),
               child: _isUploading
                   ? const SizedBox(
@@ -320,42 +425,86 @@ class _AdminCategoryState extends State<AdminCategory> {
                       width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save Category'),
+                  : Text(
+                      categoryData == null
+                          ? 'Save Category'
+                          : 'Update Category',
+                    ),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
 
-  void _handleCategorySubmission() {
-    if (_categoryController.text.trim().isEmpty || _image == null) {
-      setState(() => _isUploading = true);
-      _showSnackBar(
-          'Please provide both a category name and an image', Colors.red);
+  void _handleCategorySubmission({dynamic categoryData}) {
+    final isEditing = categoryData != null;
+    final name = _categoryController.text.trim();
+
+    if (name.isEmpty) {
+      _showSnackBar('Please provide a category name', Colors.red);
       return;
     }
 
-    if (!_image!.existsSync()) {
+    // When creating, an image is required. When editing, it's optional.
+    if (!isEditing && _image == null) {
+      _showSnackBar('Please provide an image for the new category', Colors.red);
+      return;
+    }
+
+    if (_image != null && !_image!.existsSync()) {
       _showSnackBar('Selected image is invalid', Colors.red);
       return;
     }
 
     setState(() => _isUploading = true);
 
-    context.read<CreateCategoryBloc>().add(
-          FetchCreateCategory(
-            categoryName: _categoryController.text.trim(),
-            imageFile: _image!,
-          ),
-        );
+    if (isEditing) {
+      // Dispatch edit event
+      context.read<EditCategoryBloc>().add(SubmitEditCategory(
+            categoryId: categoryData.id,
+            categoryName: name,
+            imageFile: _image, // Can be null
+          ));
+    } else {
+      // Dispatch create event
+      setState(() => _isUploading = true);
+      context.read<CreateCategoryBloc>().add(
+            FetchCreateCategory(
+              categoryName: name,
+              imageFile: _image!,
+            ),
+          );
+    }
   }
 
   Widget _buildCategoryGrid() {
     return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
       builder: (context, state) {
         if (state is GetAllCategoriesLoading) {
-          return const Center(child: CircularProgressIndicator());
+          // Shimmer effect for loading state
+          return Expanded(
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[900]!,
+              highlightColor: Colors.grey[800]!,
+              child: GridView.builder(
+                itemCount: 6, // Placeholder count
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 250,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 3 / 4,
+                ),
+                itemBuilder: (context, index) => Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+          );
         } else if (state is GetAllCategoriesError) {
           return const Center(
             child: Text(
@@ -366,18 +515,25 @@ class _AdminCategoryState extends State<AdminCategory> {
         } else if (state is GetAllCategoriesLoaded) {
           final categories = state.categories;
 
-          if (categories.isEmpty || categories.isEmpty) {
+          // Initialize master list once
+          if (_allCategories.isEmpty) {
+            _allCategories = categories;
+            _filteredCategories = List.from(categories);
+          }
+
+          if (_filteredCategories.isEmpty) {
             return const Center(
               child: Text(
-                'No categories available',
+                'No categories found',
                 style: TextStyle(color: Colors.white),
+                semanticsLabel: 'No categories found',
               ),
             );
           }
 
           return Expanded(
             child: GridView.builder(
-              itemCount: categories.length,
+              itemCount: _filteredCategories.length, // ✅ use filtered list
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 250,
                 mainAxisSpacing: 16,
@@ -385,96 +541,130 @@ class _AdminCategoryState extends State<AdminCategory> {
                 childAspectRatio: 3 / 4,
               ),
               itemBuilder: (context, index) {
-                final category = categories[index];
-                return Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8E1D1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Stack(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                final category =
+                    _filteredCategories[index]; // ✅ use filtered list
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Product_list(
+                          CategoryId:
+                              category.id!, // ✅ use category from filtered list
+                          nav_type: 'admin',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8E1D1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Stack(
+                      children: [
+                        Column(
                           children: [
-                            const SizedBox(height: 20),
-                            Image.network(
-                              category.image,
-                              height: 80,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                Icons.broken_image,
-                                size: 80,
-                                semanticLabel: 'Image failed to load',
-                              ),
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return const SizedBox(
-                                  height: 80,
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                              },
-                            ),
-                            SizedBox(height: 15.h),
-                            Text(
-                              category.name,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              semanticsLabel: category.name,
-                            ),
-                            SizedBox(height: 15),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4,
-                                horizontal: 12,
-                              ),
+                              height: 250,
+                              width: 200,
                               decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                'ACTIVE',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                                color: const Color(0xFFE8E1D1),
+                                borderRadius: BorderRadius.circular(16),
+                                image: DecorationImage(
+                                  image: NetworkImage(category.image),
+                                  fit: BoxFit.cover,
                                 ),
-                                semanticsLabel: 'Category is active',
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.6),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          category.name,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                          semanticsLabel: category.name,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                            horizontal: 12,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              _showSnackBar(
+                                                'Category is active',
+                                                Colors.grey,
+                                              );
+                                            },
+                                            child: const Text(
+                                              'ACTIVE',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              semanticsLabel:
+                                                  'Category is active',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton(
-                          icon: SvgPicture.asset(
-                            'assets/product_note.svg',
-                            colorFilter: const ColorFilter.mode(
-                                Colors.black, BlendMode.srcIn),
-                            semanticsLabel: 'Edit category',
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.edit_note,
+                              color: Colors.white,
+                              semanticLabel: 'Edit category',
+                            ),
+                            onPressed: () {
+                              _showAddCategoryDialog(categoryData: category);
+                            },
                           ),
-                          onPressed: () {
-                            _showSnackBar('Edit functionality not implemented',
-                                Colors.blue);
-                          },
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
             ),
           );
         }
+
         return const SizedBox();
       },
     );

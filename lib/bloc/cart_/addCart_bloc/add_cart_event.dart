@@ -7,5 +7,5 @@ class FetchAddCart extends AddCartEvent {
   final String productId;
   final int quantity;
 
-  FetchAddCart(this.productId, this.quantity);
+  FetchAddCart({required this.productId, required this.quantity});
 }

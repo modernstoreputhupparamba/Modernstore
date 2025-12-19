@@ -1,7 +1,6 @@
 plugins {
     id "com.android.application"
-    id "org.jetbrains.kotlin.android" // use the modern plugin id
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -19,14 +18,14 @@ android {
     }
 
     compileOptions {
-        // Use Java 21 consistently
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        // Use Java 1.8 (like your other projects)
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        // Match Kotlin JVM target to Java 21
-        jvmTarget = "21"
+        // JVM target also 1.8
+        jvmTarget = "1.8"
     }
 
     buildTypes {
@@ -40,7 +39,7 @@ flutter {
     source = "../.."
 }
 
-// Force Kotlin to use Java 21 toolchain
-kotlin {
-    jvmToolchain(21)
-}
+// ❌ Remove this whole block (it forces Java 21)
+// kotlin {
+//     jvmToolchain(21)
+// }

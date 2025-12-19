@@ -16,7 +16,9 @@ class OfferproductBloc extends Bloc<OfferproductEvent, OfferproductState> {
       emit(OfferproductLoading());
       try {
         offerproductModel = await offerproductApi.getOfferproductModel();
-        emit(OfferproductLoaded());
+        emit(OfferproductLoaded(
+          offerproductModel: offerproductModel,
+        ));
       } catch (e) {
         if (kDebugMode) { 
           print(e);

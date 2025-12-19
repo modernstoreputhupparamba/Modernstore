@@ -11,6 +11,7 @@ import 'package:google_fonts/google_fonts.dart'; // Keep for other widgets
 import 'package:image_picker/image_picker.dart';
 import 'package:modern_grocery/bloc/Banner_/DeleteBanner_bloc/delete_banner_bloc.dart';
 import 'package:modern_grocery/bloc/Banner_/GetAllBannerBloc/get_all_banner_bloc.dart';
+import 'package:modern_grocery/bloc/Dashboard/dashboard_bloc.dart';
 // --- Adjust this import path as needed ---
 
 // ------------------------------------------
@@ -38,7 +39,8 @@ class _DashboardState extends State<Dashboard> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        BlocProvider.of<GetAllBannerBloc>(context).add(fetchGetAllBanner());
+        BlocProvider.of<GetAllBannerBloc>(context).add(FetchGetAllBannerEvent());
+        BlocProvider.of<DashboardBloc>(context).add(FetchDashboardData());
       }
     });
   }
@@ -102,163 +104,160 @@ class _DashboardState extends State<Dashboard> {
   //
   // [--- THIS SECTION IS MODIFIED ---]
   //
-  Widget _buildbanner() {
-    return Column(
-      children: [
-        BlocBuilder<GetAllBannerBloc, GetAllBannerState>(
-          builder: (context, state) {
-            if (state is GetAllBannerLoaded) {
-              final banner = state.banner;
-              if (banner.banners.isEmpty) {
-                return Container(
-                  height: 200.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800], // Kept original color
-                    borderRadius: BorderRadius.circular(8.0.r),
-                  ),
-                  child: Center(
-                    // --- Refactored Style ---
-                    child: Text('No Banners Found',
-                        style: fontStyles.primaryTextStyle
-                            .copyWith(color: appColor.textColor2)),
-                  ),
-                );
-              }
-              final bannerImg = banner.banners.toList();
+ Widget _buildbanner() {
+  return BlocBuilder<GetAllBannerBloc, GetAllBannerState>(
+    builder: (context, state) {
+      if (state is GetAllBannerLoaded) {
+        final banner = state.banner;
 
-              return Column(
-                children: [
-                  CarouselSlider(
-                    carouselController: _carouselController,
-                    items: bannerImg.map((bannerItem) {
-                      // Renamed imageUrl to bannerItem
-                      final String url = (bannerItem.images.isNotEmpty)
-                          ? bannerItem.images[0]
-                          : "";
+        if (banner.banners.isEmpty) {
+          return Container(
+            height: 200.h,
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(8.0.r),
+            ),
+            child: Center(
+              child: Text(
+                'No Banners Found',
+                style: fontStyles.primaryTextStyle
+                    .copyWith(color: appColor.textColor2),
+              ),
+            ),
+          );
+        }
 
-                      if (url.isEmpty || !url.startsWith('http')) {
-                        return _buildErrorImage(); // Assuming _buildErrorImage is updated below
-                      }
+        final bannerImg = banner.banners.toList();
 
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0.r),
-                            child: CachedNetworkImage(
-                              imageUrl: url,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorWidget: (context, url, error) =>
-                                  _buildErrorImage(),
-                              placeholder: (context, url) => Shimmer.fromColors(
-                                baseColor: Colors.grey[900]!,
-                                highlightColor: Colors.grey[800]!,
-                                child: Container(color: Colors.grey[800]),
-                              ),
-                            ),
-                          ),
-                          // --- Delete button passed the correct ID ---
-                          Positioned(
-                            top: 8.h,
-                            right: 8.w, // Positioned top-right
-                            child: _buildbannerDelete(
-                                bannerItem.id, context), // Pass context
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                    options: CarouselOptions(
-                      height: 222.h,
-                      aspectRatio: 16 / 9,
-                      viewportFraction: 0.8,
-                      initialPage: 0,
-                      enableInfiniteScroll: bannerImg.length > 1,
-                      reverse: false,
-                      autoPlay: bannerImg.length > 1,
-                      autoPlayInterval: const Duration(seconds: 3),
-                      autoPlayAnimationDuration:
-                          const Duration(milliseconds: 800),
-                      autoPlayCurve: Curves.fastOutSlowIn,
-                      enlargeCenterPage: true,
-                      enlargeFactor: 0.3,
-                      scrollDirection: Axis.horizontal,
-                      onPageChanged: (index, reason) {
-                        if (mounted) {
-                          // Added mounted check
-                          setState(() {
-                            _currrentBanner = index;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  // Positioned removed from here
-                  SizedBox(height: 22.h),
-                  if (bannerImg.length > 1)
-                    Padding(
-                      padding: EdgeInsets.only(top: 8.h),
-                      child: AnimatedSmoothIndicator(
-                        activeIndex: _currrentBanner,
-                        count: bannerImg.length,
-                        effect: WormEffect(
-                          dotHeight: 8.h,
-                          dotWidth: 8.w,
-                          spacing: 5.w,
-                          activeDotColor: Colors.white,
-                          dotColor: Colors.grey,
+        return Column(
+          children: [
+            CarouselSlider(
+              carouselController: _carouselController,
+              items: bannerImg.map((bannerItem) {
+                final String url = (bannerItem.images.isNotEmpty)
+                    ? bannerItem.images[0]
+                    : "";
+
+                if (url.isEmpty || !url.startsWith('http')) {
+                  return _buildErrorImage();
+                }
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0.r),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorWidget: (context, url, error) =>
+                            _buildErrorImage(),
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey[900]!,
+                          highlightColor: Colors.grey[800]!,
+                          child: Container(color: Colors.grey[800]),
                         ),
-                        onDotClicked: (index) {
-                          _carouselController.animateToPage(index);
-                        },
                       ),
                     ),
-                ],
-              );
-            } else if (state is GetAllBannerError) {
-              return Container(
-                height: 200.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey[800], // Kept original color
-                  borderRadius: BorderRadius.circular(8.0.r),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: appColor.errorColor, size: 40.sp),
-                      SizedBox(height: 10.h),
-                      // --- Refactored Style ---
-                      Text("Failed to load banners",
-                          style: fontStyles.errorstyle
-                              .copyWith(color: appColor.textColor2)),
-                    ],
-                  ),
-                ),
-              );
-            } else {
-              // Loading state
-              return SizedBox(
-                height: 222.h,
-                child: Shimmer.fromColors(
-                  baseColor: Colors.grey[900]!,
-                  highlightColor: Colors.grey[800]!,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 20.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(8.0.r),
+                    Positioned(
+                      top: 8.h,
+                      right: 8.w,
+                      child: _buildbannerDelete(bannerItem.id, context),
                     ),
+                  ],
+                );
+              }).toList(),
+              options: CarouselOptions(
+                height: 200.h,
+                aspectRatio: 16 / 9,
+                viewportFraction: 0.98,
+                initialPage: 0,
+                enableInfiniteScroll: bannerImg.length > 1,
+                reverse: false,
+                autoPlay: bannerImg.length > 1,
+                autoPlayInterval: const Duration(seconds: 3),
+                autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                autoPlayCurve: Curves.fastOutSlowIn,
+                enlargeCenterPage: true,
+                enlargeFactor: 0.3,
+                scrollDirection: Axis.horizontal,
+                onPageChanged: (index, reason) {
+                  if (!mounted) return;
+                  setState(() {
+                    _currrentBanner = index;
+                  });
+                },
+              ),
+            ),
+            SizedBox(height: 22.h),
+            if (bannerImg.length > 1)
+              Padding(
+                padding: EdgeInsets.only(top: 8.h),
+                child: AnimatedSmoothIndicator(
+                  activeIndex: _currrentBanner,
+                  count: bannerImg.length,
+                  effect: WormEffect(
+                    dotHeight: 8.h,
+                    dotWidth: 8.w,
+                    spacing: 5.w,
+                    activeDotColor: Colors.white,
+                    dotColor: Colors.grey,
                   ),
+                  onDotClicked: (index) {
+                    _carouselController.animateToPage(index);
+                  },
                 ),
-              );
-            }
-          },
-        )
-      ],
-    );
-  }
+              ),
+          ],
+        );
+      } else if (state is GetAllBannerError) {
+        return Container(
+          height: 200.h,
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(8.0.r),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: appColor.errorColor,
+                  size: 40.sp,
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  "Failed to load banners",
+                  style: fontStyles.errorstyle
+                      .copyWith(color: appColor.textColor2),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // Loading
+        return SizedBox(
+          height: 222.h,
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 20.w),
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(8.0.r),
+              ),
+            ),
+          ),
+        );
+      }
+    },
+  );
+}
+
   // [--- END OF MODIFIED SECTION ---]
 
   // --- UNCHANGED ---
@@ -285,110 +284,143 @@ class _DashboardState extends State<Dashboard> {
           ),
         ),
         SizedBox(width: 16.w),
-        GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) => Dialog(
-                backgroundColor: Colors.transparent,
-                child: InkWell(
-                  onTap: () async {
-                    // Pop dialog first
-                    Navigator.of(context).pop();
-                    final picker = ImagePicker();
-                    final pickedFile =
-                        await picker.pickImage(source: ImageSource.gallery);
+       GestureDetector(
+  onTap: () {
+    // Save the page's context
+    final pageContext = context;
 
-                    if (pickedFile != null && mounted) {
-                      // check mounted
-                      print('Selected image: ${pickedFile.path}');
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              RecentPage(imagePath: pickedFile.path),
-                        ),
-                      );
-                    } else {
-                      print('No image selected or widget unmounted.');
-                    }
-                  },
-                  child: Container(
-                    width: 383
-                        .w, // Consider making this responsive or removing fixed width
-                    height: 222.h,
-                    padding: EdgeInsets.all(20.w), // Added padding
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF3C3C3C),
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                    // Use Column for better layout in Dialog
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SvgPicture.asset('assets/upload.svg',
-                            height: 40.h), // Adjusted size
-                        SizedBox(height: 12.h),
-                        Text(
-                          "Add A Banner Image",
-                          style: GoogleFonts.poppins(
-                            // Kept original style here
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16.sp,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 6.h),
-                        Text(
-                          "optimal dimensions 383*222",
-                          style: GoogleFonts.poppins(
-                            // Kept original style here
-                            color: Colors.grey.shade300,
-                            fontSize: 12.sp,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 20.h),
-                        // Using Icon as visual cue, original Stack/Positioned removed
-                        Icon(Icons.add_circle,
-                            color: Colors.white, size: 30.sp),
-                      ],
-                    ),
-                  ),
+    showDialog(
+      context: pageContext,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            // 1. Close the dialog with its own context
+            Navigator.of(dialogContext).pop();
+
+            // 2. Pick image
+            final picker = ImagePicker();
+            final pickedFile =
+                await picker.pickImage(source: ImageSource.gallery);
+
+            // 3. After await, check if the page is still mounted
+            if (pickedFile != null && mounted) {
+              print('Selected image: ${pickedFile.name}');
+
+              // 4. Use the PAGE context to push new route
+              Navigator.push(
+                pageContext,
+                MaterialPageRoute(
+                  builder: (ctx) => RecentPage(imagePath: pickedFile.name),
                 ),
-              ),
-            );
+              );
+            } else {
+              print('No image selected or widget unmounted.');
+            }
           },
-          child:
-              SvgPicture.asset('assets/upload.svg'), // Kept original icon here
+          child: Container(
+            width: 383.w,
+            height: 222.h,
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3C3C3C),
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  'assets/upload.svg',
+                  height: 40.h,
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  "Add A Banner Image",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  "optimal dimensions 383*222",
+                  style: GoogleFonts.poppins(
+                    color: Colors.grey.shade300,
+                    fontSize: 12.sp,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 20.h),
+                Icon(
+                  Icons.add_circle,
+                  color: Colors.white,
+                  size: 30.sp,
+                ),
+              ],
+            ),
+          ),
         ),
+      ),
+    );
+  },
+  child: SvgPicture.asset('assets/upload.svg'),
+),
+
       ],
     );
   }
 
   // --- UNCHANGED ---
   Widget _buildSummaryCards() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: const [
-          SizedBox(width: 16),
-          SummaryCard(title: 'Total Orders', value: '520', icon: Icons.list),
-          SizedBox(width: 16),
-          SummaryCard(
-              title: 'Total Customers', value: '520', icon: Icons.people),
-          SizedBox(width: 16),
-          SummaryCard(
-              title: 'Total Categories', value: '14', icon: Icons.grid_view),
-          SizedBox(width: 16),
-          SummaryCard(
-              title: 'Total Revenue',
-              value: '\u20B925800', // Consider formatting currency
-              icon: Icons.credit_card),
-          SizedBox(width: 16),
-        ],
-      ),
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        if (state is DashboardLoaded) {
+          final data = state.dashboardModel.data;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                SizedBox(width: 16),
+                SummaryCard(
+                    title: 'Total Orders',
+                    value: data?.totalOrders?.toString() ?? '0',
+                    icon: Icons.list),
+                SizedBox(width: 16),
+                SummaryCard(
+                    title: 'Total Customers',
+                    value: data?.totalUsers?.toString() ?? '0',
+                    icon: Icons.people),
+                SizedBox(width: 16),
+                SummaryCard(
+                    title: 'Total Categories',
+                    value: data?.totalCategories?.toString() ?? '0',
+                    icon: Icons.grid_view),
+                SizedBox(width: 16),
+                SummaryCard(
+                    title: 'Total Revenue',
+                    value: '\u20B9${data?.totalRevenue?.toString() ?? '0'}',
+                    icon: Icons.credit_card),
+                SizedBox(width: 16),
+              ],
+            ),
+          );
+        }
+        // Shimmer for loading state
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(
+              4,
+              (index) => Shimmer.fromColors(
+                  baseColor: Colors.grey[900]!,
+                  highlightColor: Colors.grey[800]!,
+                  child: SummaryCard(title: 'Loading...', value: '...', icon: Icons.hourglass_empty)),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -400,43 +432,60 @@ class _DashboardState extends State<Dashboard> {
         color: const Color(0xff292727),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              StatCard(
-                label: 'New Orders',
-                value: '54',
-                icon: Icons.receipt_long,
-              ),
-              StatCard(
-                label: 'Out for Delivery',
-                value: '60',
-                icon: Icons.local_shipping,
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          const Divider(color: Color(0xffFFFFFF)), // Consider lighter color
-          SizedBox(height: 16.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              StatCard(
-                label: 'Delivered',
-                value: '78',
-                icon: Icons.delivery_dining,
-              ),
-              StatCard(
-                label: 'Cancelled',
-                value: '20',
-                icon: Icons.cancel,
-              ),
-            ],
-          ),
-        ],
+      child: BlocBuilder<DashboardBloc, DashboardState>(
+        builder: (context, state) {
+          if (state is DashboardLoaded) {
+            final data = state.dashboardModel.data;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    StatCard(
+                      label: 'New Orders',
+                      value: data?.newOrders?.toString() ?? '0',
+                      icon: Icons.receipt_long,
+                      position: CrossAxisAlignment.start,
+                    ),
+                    StatCard(
+                      label: 'Out for Delivery',
+                      value: data?.shippedOrders?.toString() ?? '0',
+                      icon: Icons.local_shipping,
+                      position: CrossAxisAlignment.end,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16.h),
+                const Divider(color: Color(0xffFFFFFF)),
+                SizedBox(height: 16.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    StatCard(
+                      label: 'Delivered',
+                      value: data?.deliveredOrders?.toString() ?? '0',
+                      icon: Icons.delivery_dining,
+                      position: CrossAxisAlignment.start,
+                    ),
+                    StatCard(
+                      label: 'Cancelled',
+                      value: data?.canceledOrders?.toString() ?? '0',
+                      icon: Icons.cancel,
+                      position: CrossAxisAlignment.end,
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }
+          // Shimmer for loading state
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: Container(height: 150.h, color: Colors.black),
+          );
+        },
       ),
     );
   }
@@ -662,18 +711,22 @@ class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final CrossAxisAlignment position;
+
+   
 
   const StatCard({
     super.key, // Added key
     required this.label,
     required this.value,
     required this.icon,
+    required this.position ,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:position,
       children: [
         Text(
           label,

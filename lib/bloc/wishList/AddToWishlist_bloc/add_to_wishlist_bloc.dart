@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:modern_grocery/repositery/api/fav/addToWishlist_api.dart';
-import 'package:modern_grocery/repositery/model/addToWishlist_model.dart';
+import 'package:modern_grocery/repositery/model/Wishlist/addToWishlist_model.dart';
 
 part 'add_to_wishlist_event.dart';
 part 'add_to_wishlist_state.dart';

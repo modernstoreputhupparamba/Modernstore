@@ -50,7 +50,7 @@ class Loginapi {
 
       print(' Verifying OTP...');
       print(' Phone: "$phoneNumber"');
-      print('OTP: "$otp"');
+      print(' OTP: "$otp"');
       print(' Body: $body');
 
       final response = await apiclient.invokeAPI(
@@ -62,26 +62,52 @@ class Loginapi {
       final Map<String, dynamic> jsonMap = jsonDecode(response.body);
       final Loginmodel loginmodel = Loginmodel.fromJson(jsonMap);
 
-      if (loginmodel.accessToken.isNotEmpty) {
+      // Nullable fields from model
+      final String? token = loginmodel.accessToken;
+      final user = loginmodel.user; // User? (from your model)
+
+      if (token != null && token.isNotEmpty) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", loginmodel.accessToken);
-        await prefs.setString("phone", loginmodel.user.phoneNumber);
-        await prefs.setString("userId", loginmodel.user.id);
-        final userRole = loginmodel.user.role;
-        await prefs.setString('role', userRole);
 
-        final isAdmin = userRole.toLowerCase() == 'admin';
-        await prefs.setBool('isAdmin', isAdmin);
+        // ✅ Save token
+        await prefs.setString("token", token);
 
-        if (loginmodel.user.name != null) {
-          await prefs.setString('userName', loginmodel.user.name);
+        if (user != null) {
+          // ✅ Phone number (nullable)
+          if (user.phoneNumber != null && user.phoneNumber!.isNotEmpty) {
+            await prefs.setString("phone", user.phoneNumber!);
+          }
+
+          // ✅ User ID (nullable)
+          if (user.id != null && user.id!.isNotEmpty) {
+            await prefs.setString("userId", user.id!);
+          }
+
+          // ✅ Role (nullable)
+          final String? userRole = user.role;
+          if (userRole != null && userRole.isNotEmpty) {
+            await prefs.setString('role', userRole);
+          }
+
+          // Even if role is null, isAdmin handling is safe
+          final bool isAdmin = (user.role ?? '').toLowerCase() == 'admin';
+          await prefs.setBool('isAdmin', isAdmin);
+
+          // ✅ Name (nullable)
+          if (user.name != null && user.name!.isNotEmpty) {
+            await prefs.setString('userName', user.name!);
+          }
+
+          print('User role: ${user.role}');
+          print('Is Admin: $isAdmin');
+          print('userId: ${user.id}');
+        } else {
+          print(' User object is null in login response.');
         }
 
-        print('User role: $userRole');
-        print('Is Admin: $isAdmin');
-        print('userId:${loginmodel.user.id}');
-        print('Token saved successfully: ${loginmodel.accessToken}');
+        print('Token saved successfully: $token');
 
+        // Debug: read back values
         print('VERIFICATION');
         print('Stored Token: ${prefs.getString("token")}');
         print('Stored Role: ${prefs.getString("role")}');
@@ -89,6 +115,7 @@ class Loginapi {
       } else {
         print(' No token received in response.');
       }
+
       print(' OTP verified successfully');
       return loginmodel;
     } catch (e) {

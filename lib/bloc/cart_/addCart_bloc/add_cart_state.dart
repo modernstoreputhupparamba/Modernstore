@@ -8,9 +8,9 @@ class AddCartInitial extends AddCartState {}
 class AddCartLoading extends AddCartState {}
 
 class AddCartLoaded extends AddCartState {
-  final AddCartModel addCartModel;
+    final AddToCartResponse response;
 
-  AddCartLoaded(this.addCartModel);
+  AddCartLoaded(this.response);
 }
 
 class AddCartError extends AddCartState {

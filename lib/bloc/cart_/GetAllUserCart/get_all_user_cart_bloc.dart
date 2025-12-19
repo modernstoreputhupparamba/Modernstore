@@ -1,7 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:modern_grocery/repositery/api/Cart/getAllUserCart_api.dart';
-import 'package:modern_grocery/repositery/model/getAllUserCart_model.dart';
+import 'package:modern_grocery/repositery/model/Cart/getAllUserCart_model.dart';
 
 part 'get_all_user_cart_event.dart';
 part 'get_all_user_cart_state.dart';

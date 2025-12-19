@@ -7,6 +7,9 @@ import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/bottom_navigationbar.dart';
 import 'package:modern_grocery/ui/delivery/delivery_address.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
+
+import '../../bloc/cart_/Update_cart/update_cart_bloc.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -58,6 +61,22 @@ class _CartPageState extends State<CartPage> {
                 );
               },
             ),
+            title: Center(
+              child: Text(
+                languageService.getString('cart'),
+                style: GoogleFonts.poppins(
+                  color: Color(0xFFFCF8E8),
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.24,
+                ),
+              ),
+            ),
+            actions: [
+              SizedBox(
+                width: 50.w,
+              )
+            ],
           ),
           backgroundColor: const Color(0XFF0A0909),
           body: SingleChildScrollView(
@@ -66,70 +85,82 @@ class _CartPageState extends State<CartPage> {
               child: Column(
                 children: [
                   SizedBox(height: 18.h),
-                  Center(
-                    child: Text(
-                      languageService.getString('cart'),
-                      style: GoogleFonts.poppins(
-                        color: Color(0xFFFCF8E8),
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.24,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 63.h),
 
-                  BlocBuilder<GetAllUserCartBloc, GetAllUserCartState>(
-                    builder: (context, state) {
-                      if (state is GetAllUserCartLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (state is GetAllUserCartLoaded) {
-                        final cartModel = context
+                  BlocListener<UpdateCartBloc, UpdateCartState>(
+                    listener: (context, state) {
+                      if (state is UpdateCartSuccess) {
+                        // Refresh the cart list after a successful update
+                        context
                             .read<GetAllUserCartBloc>()
-                            .getAllUserCartModel;
-
-                        if (cartModel == null ||
-                            cartModel.data == null ||
-                            cartModel.data?.allCartItems == null ||
-                            cartModel.data!.allCartItems!.isEmpty) {
-                          return Center(
-                            child: Text(
-                              languageService.getString('cart_empty'),
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 18),
-                            ),
-                          );
-                        }
-
-                        final cartItems = cartModel.data?.allCartItems!;
-                        return SizedBox(
-                          height: 120 * cartItems!.length.toDouble(),
-                          child: Column(
-                            children: cartItems.map((item) {
-                              return FavouriteItemCard(
-                                item: {
-                                  'name': item.productId.toString(),
-                                  'image':
-                                      item.quantity ?? 'assets/placeholder.png',
-                                  'price': item.unit ?? "",
-                                  'mrp':
-                                      item.quantity ?? item.totalAmount ?? ""
-                                },
-                                languageService: languageService,
-                              );
-                            }).toList(),
-                          ),
-                        );
-                      } else if (state is GetAllUserCartError) {
-                        return Center(
-                          child: Text(
-                            languageService.getString('error_loading_cart'),
-                            style: TextStyle(color: Colors.red, fontSize: 18),
+                            .add(fetchGetAllUserCartEvent());
+                      } else if (state is UpdateCartError) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(state.message),
+                            backgroundColor: Colors.red,
                           ),
                         );
                       }
-                      return const SizedBox();
                     },
+                    child: BlocBuilder<GetAllUserCartBloc, GetAllUserCartState>(
+                      builder: (context, state) {
+                        if (state is GetAllUserCartLoading) {
+                          return Column(
+                            children: List.generate(
+                                3, (index) => _buildCartItemShimmer()),
+                          );
+                        } else if (state is GetAllUserCartLoaded) {
+                          final cartModel = context
+                              .read<GetAllUserCartBloc>()
+                              .getAllUserCartModel;
+
+                          if (cartModel == null ||
+                              cartModel.data == null ||
+                              cartModel.data?.allCartItems == null ||
+                              cartModel.data!.allCartItems!.isEmpty) {
+                            return Center(
+                              child: Text(
+                                languageService.getString('cart_empty'),
+                                style: TextStyle(
+                                    color: Colors.white70, fontSize: 18),
+                              ),
+                            );
+                          }
+
+                          final cartItems = cartModel.data?.allCartItems!;
+                          return SizedBox(
+                            height: 121 * cartItems!.length.toDouble(),
+                            child: Column(
+                              children: cartItems.map((item) {
+                                return FavouriteItemCard(
+                                  // ✅ FIX: Correctly map cart item data to the widget's expected format.
+                                  productId: item.productId?.id ?? '',
+                                  item: {
+                                    'name': item.productId?.name! ?? 'No Name',
+                                    // This assumes the product object in the cart has images.
+                                    // If not, you may need to adjust your `GetAllUserCartModel`.
+                                    'image':
+                                        'assets/placeholder.png', // Placeholder, as image is not in cart model
+                                    'quantity': item.quantity ?? 1,
+                                    'price': item.totalAmount ?? 0,
+                                    'mrp': item.totalAmount ?? 0,
+                                  },
+                                  languageService: languageService,
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        } else if (state is GetAllUserCartError) {
+                          return Center(
+                            child: Text(
+                              languageService.getString('error_loading_cart'),
+                              style: TextStyle(color: Colors.red, fontSize: 18),
+                            ),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
                   ),
                   // ListView.builder(
                   //   shrinkWrap: true,
@@ -151,11 +182,63 @@ class _CartPageState extends State<CartPage> {
         );
       },
     );
+    
   }
 
+
+
+Widget _buildCartItemShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[900]!,
+      highlightColor: Colors.grey[800]!,
+      child: Container(
+        height: 100.h,
+        margin: EdgeInsets.symmetric(vertical: 8.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A0808),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: const Color(0xDBFCF8E8), width: 1.w),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 106.w,
+              height: 100.h,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            SizedBox(width: 18.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                      width: 150.w, height: 20.h, color: Colors.black),
+                  SizedBox(height: 10.h),
+                  Container(width: 100.w, height: 14.h, color: Colors.black),
+                ],
+              ),
+            ),
+            Container(
+              height: 38.h,
+              width: 90.w,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(40.r),
+              ),
+            ),
+            SizedBox(width: 10.w),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildCheckoutSection(LanguageService languageService) {
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.only(bottom: 20.h),
       decoration: BoxDecoration(
         color: Colors.black,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
@@ -208,18 +291,20 @@ class _CartPageState extends State<CartPage> {
           SizedBox(height: 30.h),
           BlocBuilder<GetAllUserCartBloc, GetAllUserCartState>(
             builder: (context, state) {
-              double totalPrice = 0;
+              num? totalPrice = 0.0; // ✅ FIX: Initialize as a double
               if (state is GetAllUserCartLoaded) {
                 final cartModel =
                     context.read<GetAllUserCartBloc>().getAllUserCartModel;
                 if (cartModel != null &&
                     cartModel.data != null &&
-                    cartModel.data?.allCartItems != null) {}
+                    cartModel.data?.allCartItems != null) {
+                  totalPrice = cartModel.data?.totalCartAmount ?? 0.0;
+                }
               }
               return Column(
                 children: [
                   _buildPriceRow(languageService.getString('price'),
-                      '₹${totalPrice.toStringAsFixed(2)}', languageService),
+                      '₹${totalPrice?.toStringAsFixed(2)}', languageService),
                   _buildPriceRow(languageService.getString('discount'), '₹5.00',
                       languageService),
                   _buildPriceRow(languageService.getString('delivery_charge'),
@@ -253,7 +338,10 @@ class _CartPageState extends State<CartPage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => DeliveryAddress()),
+                  MaterialPageRoute(builder: (context) => DeliveryAddress(
+                    Deliverytype:selectedPaymentMethod,
+                    deliveryCharge: 20,
+                  )),
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -350,11 +438,13 @@ class _CartPageState extends State<CartPage> {
 
 class FavouriteItemCard extends StatefulWidget {
   final Map<String, dynamic> item;
+  final String productId;
   final LanguageService languageService;
 
   const FavouriteItemCard({
     Key? key,
     required this.item,
+    required this.productId,
     required this.languageService,
   }) : super(key: key);
 
@@ -371,6 +461,13 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
     count = (widget.item['quantity'] as int?) ?? 1;
   }
 
+  void _updateQuantity(BuildContext context, String? type,String productId) {
+    context.read<UpdateCartBloc>().add(UpdateCartQuantity(
+          productId: productId,
+          type: type!,
+        ));
+  }
+
   bool isSelected = false;
 
   @override
@@ -381,7 +478,7 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
         mrp > 0 ? ((1 - price / mrp) * 100).toStringAsFixed(0) : '0';
 
     return Container(
-      height: 113.h,
+      height: 100.h,
       margin: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
         color: const Color(0xFF0A0808),
@@ -391,8 +488,8 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
       child: Row(
         children: [
           Container(
-            width: 121.w,
-            height: 113.h,
+            width: 106.w,
+            height: 100.h,
             decoration: BoxDecoration(
               color: Color(0xF4CCC9BC),
               borderRadius: BorderRadius.circular(8.r),
@@ -477,10 +574,10 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                 Spacer(),
                 GestureDetector(
                   onTap: () {
-                    if (count > 1) {
-                      setState(() => count--);
-                      // _updateQuantity(context);
-                    }
+              
+                      setState(() => count > 1 ? count-- : count = 1);
+                      _updateQuantity(context, 'decrease', widget.productId);
+                    
                   },
                   child: Icon(
                     Icons.remove,
@@ -501,7 +598,7 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                 GestureDetector(
                   onTap: () {
                     setState(() => count++);
-                    // _updateQuantity(context);
+                    _updateQuantity(context, 'increase', widget.productId);
                   },
                   child: Icon(
                     Icons.add,
@@ -524,5 +621,55 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
     if (value is int) return value.toDouble();
     if (value is String) return double.tryParse(value);
     return null;
+  }
+
+  Widget _buildCartItemShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[900]!,
+      highlightColor: Colors.grey[800]!,
+      child: Container(
+        height: 100.h,
+        margin: EdgeInsets.symmetric(vertical: 8.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0A0808),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: const Color(0xDBFCF8E8), width: 1.w),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 106.w,
+              height: 100.h,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            SizedBox(width: 18.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                      width: 150.w, height: 20.h, color: Colors.black),
+                  SizedBox(height: 10.h),
+                  Container(width: 100.w, height: 14.h, color: Colors.black),
+                ],
+              ),
+            ),
+            Container(
+              height: 38.h,
+              width: 90.w,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(40.r),
+              ),
+            ),
+            SizedBox(width: 10.w),
+          ],
+        ),
+      ),
+    );
   }
 }

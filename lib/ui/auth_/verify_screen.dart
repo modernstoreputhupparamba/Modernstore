@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:modern_grocery/bloc/Login_/verify/verify_bloc.dart';
 import 'package:modern_grocery/bloc/Login_/verify/verify_event.dart';
+import 'package:modern_grocery/repositery/model/user/getUserDlvAddresses.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/admin/admin_navibar.dart';
 import 'package:modern_grocery/ui/auth_/enter_screen.dart';
@@ -13,6 +14,8 @@ import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:modern_grocery/widgets/fontstyle.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../bottom_navigationbar.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String PhoneNo; // Display format: +91 1234567890
@@ -34,6 +37,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
   bool isLoading = false;
   bool isAdmin = true;
   bool isLoadingAdminStatus = true;
+  String UserId = '';
 
   String cleanNumber(String number) {
     return number.replaceAll(RegExp(r'^\+91'), '');
@@ -76,6 +80,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
       final role = prefs.getString('role');
       final userType = prefs.getString('userType');
       final isAdminFlag = prefs.getBool('isAdmin');
+      UserId = prefs.getString('userId')!;
 
       // Determine if user is admin based on stored values
       final bool isAdminResult = role == 'admin' ||
@@ -166,8 +171,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              !isAdmin ? AdminNavibar() : LocationPage()));
+                          builder: (context) => isAdmin
+                              ? AdminNavibar()
+                              : UserId.isEmpty
+                                  ? NavigationBarWidget()
+                                  : LocationPage()));
                 }
               });
             } else if (state is VerifyError) {

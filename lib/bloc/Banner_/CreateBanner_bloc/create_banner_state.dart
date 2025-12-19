@@ -9,12 +9,11 @@ class CreateBannerLoading extends CreateBannerState {}
 
 class CreateBannerLoaded extends CreateBannerState {
   final CreateBannerModel result;
-
   CreateBannerLoaded({required this.result});
 }
 
 class CreateBannerError extends CreateBannerState {
   final String message;
-
   CreateBannerError({required this.message});
 }
+

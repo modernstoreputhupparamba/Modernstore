@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
 import 'package:modern_grocery/bloc/Categories_/GetAllCategories/get_all_categories_bloc.dart';
+import 'package:modern_grocery/bloc/Product_/get_all_product/get_all_product_bloc.dart';
 import 'package:modern_grocery/services/language_service.dart'; // Add this import
-import 'package:modern_grocery/ui/products/fruites_page.dart';
+import 'package:modern_grocery/ui/products/Product_list.dart';
+import 'package:modern_grocery/ui/products/product_details.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -17,32 +22,44 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  int selectedIndex = 0;
   late LanguageService languageService;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  bool get _isSearching => _searchController.text.isNotEmpty;
 
   @override
   void initState() {
     super.initState();
-    languageService = LanguageService(); // Initialize the service
+    languageService = LanguageService();
     BlocProvider.of<GetAllCategoriesBloc>(context).add(fetchGetAllCategories());
+    _searchController.addListener(_onSearchChanged);
   }
 
-  final List<Map<String, String>> categories = [
-    {'name': 'Fruits', 'image': 'assets/Fruites.png'},
-    {'name': 'Milk', 'image': 'assets/Milk.png'},
-    {'name': 'Meats', 'image': 'assets/Meats.png'},
-    {'name': 'Nuts', 'image': 'assets/Nuts.png'},
-    {'name': 'Vegetables', 'image': 'assets/Vegetable.png'},
-    {'name': 'Fancy', 'image': 'assets/Fancy.png'},
-    {'name': 'Rice', 'image': 'assets/Rice.png'},
-    {'name': 'Egg', 'image': 'assets/Egg.png'},
-    {'name': 'Pet Food', 'image': 'assets/Pet Food.png'},
-    {'name': 'Perfume', 'image': 'assets/Perfume.png'},
-    {'name': 'Sanitery Pad', 'image': 'assets/Sanitery pads.png'},
-    {'name': 'Bakery', 'image': 'assets/Bakery.png'},
-    {'name': 'Gadget', 'image': 'assets/Gadget.png'},
-    {'name': 'Bevarage', 'image': 'assets/Bevarages.png'},
-  ];
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+void _onSearchChanged() {
+  if (_debounce?.isActive ?? false) _debounce!.cancel();
+  _debounce = Timer(const Duration(milliseconds: 500), () {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      context.read<GetAllProductBloc>().add(fetchGetAllProduct(query));
+      setState(() {
+        
+      });
+    } else {
+      // clear product results and show categories
+      context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
+      setState(() {}); // forces AnimatedSwitcher to show categories based on _isSearching
+    }
+  });
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -55,8 +72,21 @@ class _SearchPageState extends State<SearchPage> {
           children: [
             SizedBox(height: 72.h),
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Use a SizedBox to balance the trailing IconButton
+                SizedBox(width: 50.w),
+                Expanded(
+                  child: Text(
+                    languageService.getString('find_products'), // Localized text
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24.sp,
+                      color: appColor.textColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
                 IconButton(
                   onPressed: () {
                     if (widget.onFavTap != null) {
@@ -64,24 +94,15 @@ class _SearchPageState extends State<SearchPage> {
                     }
                   },
                   icon: Icon(
-                    Icons.favorite_outline,
+                    Icons.favorite_border,
                     color: Color(0xFFF5E9B5),
                     size: 22.sp,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 1.h),
-            Center(
-              child: Text(
-                languageService.getString('find_products'), // Localized text
-                style: GoogleFonts.poppins(
-                  fontSize: 24.sp,
-                  color: appColor.textColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+  
+     
             SizedBox(height: 20.h),
             Container(
               decoration: BoxDecoration(
@@ -90,6 +111,7 @@ class _SearchPageState extends State<SearchPage> {
                 borderRadius: BorderRadius.circular(10.r),
               ),
               child: TextField(
+                controller: _searchController,
                 style: GoogleFonts.poppins(color: Color(0x91FCF8E8)),
                 decoration: InputDecoration(
                   hintText: languageService
@@ -104,58 +126,88 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
             SizedBox(height: 36.h),
-            BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
-                builder: (context, state) {
-              if (state is GetAllCategoriesLoading) {
-                return Shimmer.fromColors(
-                  baseColor: Colors.grey[900]!,
-                  highlightColor: Colors.grey[800]!,
-                  child: Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 20,
-                      mainAxisSpacing: 20,
-                    ),
-                  ),
-                );
-              }
-              if (state is GetAllCategoriesError) {
-                return Center(
-                    child: Text(
-                        languageService.getString('categories_not_recognized'),
-                        style: GoogleFonts.poppins(color: Colors.white)));
-              }
-              if (state is GetAllCategoriesLoaded) {
-                final Category = state.categories;
-                return Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 20,
-                    mainAxisSpacing: 20,
-                    children: Category.map((category) {
-                      return _buildCategoryCard(
-                        category.name,
-                        category.image,
-                      );
-                    }).toList(),
-                  ),
-                );
-              } else {
-                return SizedBox();
-              }
-            })
+            Expanded(
+              child: _isSearching
+                  ? _buildProductSearchResult()
+                  : _buildCategoryGrid(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCategoryCard(String title, String imageUrl) {
+  Widget _buildCategoryGrid() {
+    return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
+      builder: (context, state) {
+        if (state is GetAllCategoriesLoading) {
+          return _buildShimmerGrid();
+        }
+        if (state is GetAllCategoriesError) {
+          return Center(
+              child: Text(
+                  languageService.getString('categories_not_recognized'),
+                  style: GoogleFonts.poppins(color: Colors.white)));
+        }
+        if (state is GetAllCategoriesLoaded) {
+          final categories = state.categories;
+          if (categories.isEmpty) {
+            return Center(
+                child: Text(languageService.getString('no_categories_found'),
+                    style: GoogleFonts.poppins(color: Colors.white)));
+          }
+          return GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+            ),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              return _buildCategoryCard(
+                  category.name, category.image, category.id);
+            },
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildProductSearchResult() {
+    return BlocBuilder<GetAllProductBloc, GetAllProductState>(
+      builder: (context, state) {
+        if (state is GetAllProductLoading) {
+          return _buildShimmerGrid();
+        }
+        if (state is GetAllProductError) {
+          return Center(
+              child: Text(languageService.getString('failed_load_products'),
+                  style: GoogleFonts.poppins(color: Colors.white)));
+        }
+        if (state is GetAllProductLoaded) {
+          final products = state.getAllProduct.data ?? [];
+          if (products.isEmpty) {
+            return Center(
+                child: Text(languageService.getString('no_products_found'),
+                    style: GoogleFonts.poppins(color: Colors.white)));
+          }
+          // Using FruitCard from Product_list.dart
+          return _buildProductGridView(products);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildCategoryCard(String title, String imageUrl, String categoryId) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => FruitesPage()),
+          MaterialPageRoute(
+              builder: (context) => Product_list(CategoryId: categoryId,nav_type: 'home')),
         );
       },
       child: Container(
@@ -163,17 +215,22 @@ class _SearchPageState extends State<SearchPage> {
           color: appColor.primaryText,
           borderRadius: BorderRadius.circular(22.r),
         ),
-        child: Column(
+        child: Column( //
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.network(
-              imageUrl ?? 'https://via.placeholder.com/80',
+            CachedNetworkImage( // Use CachedNetworkImage
+              imageUrl: imageUrl,
               height: 74.h,
               width: 104.w,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Icon(Icons.broken_image);
-              },
+              placeholder: (context, url) => Shimmer.fromColors( // Shimmer placeholder
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Container(color: Colors.white),
+              ),
+              // errorBuilder: (context, error, stackTrace) {
+              //   return const Icon(Icons.broken_image, color: Colors.grey); // Error icon
+              // },
             ),
             SizedBox(height: 13.h),
             Padding(
@@ -186,6 +243,46 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductGridView(List<dynamic> products) {
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.63,
+        crossAxisSpacing: 10.w,
+        mainAxisSpacing: 10.h,
+      ),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        final product = products[index];
+        return FruitCard(
+          product: product.toJson(),
+          languageService: languageService,
+          nav_type: 'search',
+        );
+      },
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.9,
+        crossAxisSpacing: 10.w,
+        mainAxisSpacing: 10.h,
+      ),
+      itemCount: 8,
+      itemBuilder: (context, index) => Shimmer.fromColors(
+        baseColor: Colors.grey[900]!,
+        highlightColor: Colors.grey[800]!,
+        child: Container(
+          decoration: BoxDecoration(
+              color: Colors.grey[900], borderRadius: BorderRadius.circular(22.r)),
         ),
       ),
     );

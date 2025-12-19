@@ -31,7 +31,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.initState();
     BlocProvider.of<UserprofileBloc>(context).add(fetchUserprofile());
     BlocProvider.of<UserdeliveryaddressBloc>(context)
-        .add(fetchUserdeliveryaddressEvent());
+        .add(FetchUserdeliveryaddressEvent());
   }
 
   @override
@@ -44,21 +44,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  void _initializeControllers() {
-    nameController = TextEditingController(text: _profileData?.user.name ?? '');
-    phoneController =
-        TextEditingController(text: _profileData?.user.phoneNumber ?? '');
+void _initializeControllers() {
+  nameController = TextEditingController(
+    text: _profileData?.user.name ?? '',
+  );
 
-    String? deliveryAddress = '';
-    if (_addressData != null &&
-        _addressData!.data != null &&
-        _addressData!.data.isNotEmpty) {
-      deliveryAddress = addressValues.reverse[_addressData!.data.first.address];
-    }
-    addressController = TextEditingController(text: deliveryAddress);
+  phoneController = TextEditingController(
+    text: _profileData?.user.phoneNumber ?? '',
+  );
 
-    _controllersInitialized = true;
+  String deliveryAddress = '';
+
+  if (_addressData?.data != null && _addressData!.data!.isNotEmpty) {
+    deliveryAddress = _addressData!.data!.first.address ?? '';
   }
+
+  addressController = TextEditingController(
+    text: deliveryAddress,
+  );
+
+  _controllersInitialized = true;
+}
+
 
   void _saveChanges() {
     // final updatedName = nameController.text.trim();
@@ -132,14 +139,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     );
                   }
-                  if (addressState is UserdeliveryaddressLoaded) {
-                    _addressData =
-                        BlocProvider.of<UserdeliveryaddressBloc>(context)
-                            .getUserDlvAddresses;
+                 if (addressState is UserdeliveryaddressLoaded) {
+  _addressData = addressState.addresses as GetUserDlvAddresses?;
 
-                    if (!_controllersInitialized) {
-                      _initializeControllers();
-                    }
+  if (!_controllersInitialized) {
+    _initializeControllers();
+  }
+
+
 
                     return Scaffold(
                       backgroundColor: const Color(0xFF0A0909),

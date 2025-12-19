@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -8,8 +9,8 @@ import 'package:modern_grocery/repositery/api/api_exception.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  Future<http.Response> invokeAPI(String path, String method,
-      [Object? body]) async {
+  Future<http.Response> invokeAPI(String path, String method, Object? body,
+      {Map<String, File>? files}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -24,6 +25,32 @@ class ApiClient {
 
     if (kDebugMode) print(' Token: ${token ?? "No token"}');
 
+    // Handle Multipart (File Upload) Request for POST or PUT
+    if (method.toUpperCase() == 'POST_MULTIPART' || (method.toUpperCase() == 'PUT' && files != null)) {
+      try {
+        final request = http.MultipartRequest(
+            (method.toUpperCase() == 'PUT') ? 'PUT' : 'POST', Uri.parse(url));
+        request.headers.addAll(headers);
+
+        // Add body fields
+        if (body is Map<String, String>) {
+          request.fields.addAll(body);
+        }
+
+        // Add files
+        if (files != null) {
+          for (var entry in files.entries) {
+            request.files.add(
+                await http.MultipartFile.fromPath(entry.key, entry.value.path));
+          }
+        }
+
+        final streamedResponse = await request.send();
+        return await http.Response.fromStream(streamedResponse);
+      } catch (e) {
+        throw ApiException('Network error during file upload: $e', 0);
+      }
+    }
     String? encodedBody;
     if (body != null) {
       encodedBody = body is String ? body : jsonEncode(body);

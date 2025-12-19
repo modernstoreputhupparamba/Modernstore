@@ -1,8 +1,9 @@
 {
-    "cSpell.words": [
-        "blocprovider",
-        "detetebanner",
-        "imagebanner"
-    ],
-    "github-enterprise.uri": "https://repour"
+  "cSpell.words": [
+    "blocprovider",
+    "detetebanner",
+    "imagebanner"
+  ],
+  "github-enterprise.uri": "https://repour",
+  "dart.flutterSdkPath": ".fvm/versions/stable"
 }

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart';
 import 'package:modern_grocery/repositery/api/api_client.dart';
-import 'package:modern_grocery/repositery/model/getAllUserCart_model.dart';
+import 'package:modern_grocery/repositery/model/Cart/getAllUserCart_model.dart';
 
 class GetallusercartApi {
   ApiClient apiClient = ApiClient();

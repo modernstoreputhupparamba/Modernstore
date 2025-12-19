@@ -11,7 +11,7 @@ class fetchCreateProduct extends CreateProductEvent {
   final File imageFile;
   final String unit;
   final dynamic categoryId;
-  final dynamic discountPercentage;
+  final String discountPercentage;
 
   fetchCreateProduct(
       {required this.productName,

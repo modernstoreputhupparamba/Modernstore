@@ -57,8 +57,10 @@ class _EnterScreenState extends State<EnterScreen> {
               });
 
               final token = state.login.accessToken;
+              final userType= state.login.user?.role;
               final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('token', token);
+              await prefs.setString('token', token!);
+              await prefs.setString('userType', userType!);
               print('token saved: $token');
 
               final String numberToSave = phoneController.text.trim();

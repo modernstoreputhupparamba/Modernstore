@@ -9,7 +9,7 @@ class FetchCreateBannerEvent extends CreateBannerEvent {
   final String type;
   final String categoryId;
   final String link;
-  final String imagePath;
+  final File imagePath; // 👈 actually a File, not a path
   final void Function(int sent, int total)? onSendProgress;
 
   FetchCreateBannerEvent({

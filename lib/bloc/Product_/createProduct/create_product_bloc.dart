@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:modern_grocery/repositery/api/product/createProduct_api.dart';
-import 'package:modern_grocery/repositery/model/createProduct_model.dart';
+import 'package:modern_grocery/repositery/model/product/createProduct_model.dart';
 
 part 'create_product_event.dart';
 part 'create_product_state.dart';
@@ -17,7 +17,7 @@ class CreateProductBloc extends Bloc<CreateProductEvent, CreateProductState> {
         final model = await createProductApi.uploadProduct(
             productName: event.productName,
             productDescription: event.productDescription,
-            basePrice: event.price,
+            price: event.price,
             imageFile: event.imageFile,
             categoryId: event.categoryId,
             discountPercentage: event.discountPercentage,

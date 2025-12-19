@@ -89,6 +89,11 @@ class AppLocalizations {
       'address_coming': 'Address management coming soon!',
       'wallet_coming': 'Wallet feature coming soon!',
       'review_coming': 'Review feature coming soon!',
+      'save_address': 'Save Address',
+      'city': 'City',
+      'state': 'State',
+      'zip_code': 'Zip Code',
+      'add_new_address': 'Add New Address',
       'logout_confirm': 'Are you sure you want to logout?',
       'help_desk': 'Help Desk',
       'terms_coming': 'Terms & Conditions coming soon!',
@@ -235,6 +240,13 @@ class AppLocalizations {
       'terms_of_service': 'Terms Of Service ',
       'and': 'And ',
       'privacy_policy_text': 'Privacy Policy ',
+
+      // Orders
+      'my_orders': 'My Orders',
+      'all': 'All',
+      'delivered': 'Delivered',
+      'cancelled': 'Cancelled',
+      'no_orders_found': 'No orders found',
     },
     'hi': {
       // Common
@@ -270,6 +282,11 @@ class AppLocalizations {
       'address_coming': 'पता प्रबंधन जल्द आ रहा है!',
       'wallet_coming': 'वॉलेट सुविधा जल्द आ रहा है!',
       'review_coming': 'समीक्षा सुविधा जल्द आ रहा है!',
+      'save_address': 'पता सहेजें',
+      'city': 'शहर',
+      'state': 'राज्य',
+      'zip_code': 'पिन कोड',
+      'add_new_address': 'नया पता जोड़ें',
       'logout_confirm': 'क्या आप वाकई लॉग आउट करना चाहते हैं?',
       'help_desk': 'सहायता डेस्क',
       'terms_coming': 'नियम और शर्तें जल्द आ रहा है!',
@@ -457,6 +474,13 @@ class AppLocalizations {
       'login_error': 'Login error. Please try again.',
       'processing': 'Processing...',
       'please_enter_phone': 'Please enter your phone number',
+
+      // Orders
+      'my_orders': 'मेरे ऑर्डर',
+      'all': 'सभी',
+      'delivered': 'डिलीवर किया गया',
+      'cancelled': 'रद्द किया गया',
+      'no_orders_found': 'कोई ऑर्डर नहीं मिला',
     },
     'ml': {
       // Common
@@ -518,6 +542,11 @@ class AppLocalizations {
       'address_coming': 'വിലാസ മാനേജ്മെന്റ് ഉടൻ വരുന്നു!',
       'wallet_coming': 'വാലറ്റ് സവിശേഷത ഉടൻ വരുന്നു!',
       'review_coming': 'അവലോകന സവിശേഷത ഉടൻ വരുന്നു!',
+      'save_address': 'വിലാസം സേവ് ചെയ്യുക',
+      'city': 'നഗരം',
+      'state': 'സംസ്ഥാനം',
+      'zip_code': 'പിൻ കോഡ്',
+      'add_new_address': 'പുതിയ വിലാസം ചേർക്കുക',
       'logout_confirm': 'നിങ്ങൾക്ക് ലോഗ് ഔട്ട് ചെയ്യണമെന്ന് ഉറപ്പാണോ?',
       'help_desk': 'സഹായ ഡെസ്ക്',
       'terms_coming': 'നിബന്ധനകളും വ്യവസ്ഥകളും ഉടൻ വരുന്നു!',
@@ -687,6 +716,13 @@ class AppLocalizations {
       'terms_of_service': 'സേവന നിബന്ധനകൾ ',
       'and': 'ഒപ്പം ',
       'privacy_policy_text': 'സ്വകാര്യതാ നയം ',
+
+      // Orders
+      'my_orders': 'എന്റെ ഓർഡറുകൾ',
+      'all': 'എല്ലാം',
+      'delivered': 'ഡെലിവറി ചെയ്തു',
+      'cancelled': 'റദ്ദാക്കി',
+      'no_orders_found': 'ഓർഡറുകളൊന്നും കണ്ടെത്തിയില്ല',
     },
   };
 

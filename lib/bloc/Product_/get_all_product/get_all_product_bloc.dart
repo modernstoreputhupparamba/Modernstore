@@ -16,8 +16,12 @@ class GetAllProductBloc extends Bloc<GetAllProductEvent, GetAllProductState> {
       emit(GetAllProductLoading());
 
       try {
-        getAllProduct = await getallproductApi.getGetAllProduct();
-        emit(GetAllProductLoaded());
+        getAllProduct = await getallproductApi.getGetAllProduct(
+          event.query,
+        );
+        emit(GetAllProductLoaded(
+          getAllProduct: getAllProduct,
+        ));
       } catch (e) {
         print(e);
         emit(GetAllProductError());
