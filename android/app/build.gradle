@@ -1,7 +1,6 @@
 plugins {
     id "com.android.application"
-    id "org.jetbrains.kotlin.android" // use the modern plugin id
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -19,19 +18,43 @@ android {
     }
 
     compileOptions {
-        // Use Java 21 consistently
+        // Java 21
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        // Match Kotlin JVM target to Java 21
         jvmTarget = "21"
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
+        }
+    }
+
+    // ✅ Flavor Dimension
+    flavorDimensions += "app"
+
+    // ✅ Product Flavors
+    productFlavors {
+
+        user {
+            dimension = "app"
+
+            applicationIdSuffix = ".user"
+            versionNameSuffix = "-user"
+
+            resValue "string", "app_name", "Modern Grocery User"
+        }
+
+        admin {
+            dimension = "app"
+
+            applicationIdSuffix = ".admin"
+            versionNameSuffix = "-admin"
+
+            resValue "string", "app_name", "Modern Grocery Admin"
         }
     }
 }
