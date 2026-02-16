@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:provider/provider.dart';
+
+import '../bottom_navigationbar.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Uncomment if using SVG
 
 class DeliverySuccess extends StatefulWidget {
@@ -18,20 +20,36 @@ class _DeliverySuccessState extends State<DeliverySuccess>
   late AnimationController _controller;
   late Animation<double> _animation;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
+@override
+void initState() {
+  super.initState();
 
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
-  }
+  _controller = AnimationController(
+    duration: const Duration(seconds: 3),
+    vsync: this,
+  );
+
+  // Navigate when animation finishes
+  _controller.addStatusListener((status) {
+    if (status == AnimationStatus.completed && mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const NavigationBarWidget(initialIndex: 0,),
+        ),
+        (route) => false,
+      );
+    }
+  });
+
+  // Slight delay before animation starts (optional)
+  Future.delayed(const Duration(milliseconds: 500), () {
+    if (mounted) {
+      _controller.forward();
+    }
+  });
+}
+
 
   @override
   void didChangeDependencies() {

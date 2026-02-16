@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:modern_grocery/repositery/api/api_client.dart';
-import 'package:modern_grocery/repositery/model/addToWishlist_model.dart';
+import 'package:modern_grocery/repositery/model/Wishlist/addToWishlist_model.dart';
 
 class AddToWishlistApi {
   final ApiClient apiClient = ApiClient();

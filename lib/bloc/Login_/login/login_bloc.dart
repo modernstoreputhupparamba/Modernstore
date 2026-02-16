@@ -14,10 +14,13 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   LoginBloc() : super(LoginInitial()) {
     on<fetchlogin>((event, emit) async {
       emit(loginBlocLoading());
+              print('Bloc  Loading successfully ..............');
+
       try {
         login = await loginapi.getLogin(phoneNumber: event.phoneNumber!);
 
         emit(loginBlocLoaded(login: login));
+        print('Bloc Loaded successfully ..............');
       } catch (e) {
         if (kDebugMode) {
           print(e);

@@ -11,10 +11,13 @@ import 'package:google_fonts/google_fonts.dart'; // Keep for other widgets
 import 'package:image_picker/image_picker.dart';
 import 'package:modern_grocery/bloc/Banner_/DeleteBanner_bloc/delete_banner_bloc.dart';
 import 'package:modern_grocery/bloc/Banner_/GetAllBannerBloc/get_all_banner_bloc.dart';
+import 'package:modern_grocery/bloc/Dashboard/dashboard_bloc.dart';
+import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
 // --- Adjust this import path as needed ---
 
 // ------------------------------------------
 import 'package:modern_grocery/ui/admin/admin_profile.dart';
+import 'package:modern_grocery/ui/admin/order_history.dart';
 import 'package:modern_grocery/ui/admin/upload_recentpage.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:modern_grocery/widgets/fontstyle.dart';
@@ -38,7 +41,9 @@ class _DashboardState extends State<Dashboard> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        BlocProvider.of<GetAllBannerBloc>(context).add(fetchGetAllBanner());
+        BlocProvider.of<GetAllBannerBloc>(context).add(FetchGetAllBannerEvent());
+        BlocProvider.of<DashboardBloc>(context).add(FetchDashboardData());
+        BlocProvider.of<GetAllOrdersBloc>(context).add(FetchGetAllOrders());
       }
     });
   }
@@ -49,27 +54,45 @@ class _DashboardState extends State<Dashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0XFF0A0909), // Kept original color
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 44.h),
-            _buildAppBar(),
-            SizedBox(height: 40.h),
-            _buildSearchBar(),
-            SizedBox(height: 40.h),
-            _buildbanner(),
-            SizedBox(height: 20.h),
-            _buildSummaryCards(),
-            SizedBox(height: 20.h),
-            _buildStatsContainer(),
-            SizedBox(height: 20.h),
-            _buildTopCategoriesChart(),
-            SizedBox(height: 20.h),
-            _buildMonthlyOrdersChart(),
-            SizedBox(height: 20.h),
-          ],
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth > 600;
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 20.h),
+                  _buildAppBar(),
+                  SizedBox(height: 40.h),
+                  _buildSearchBar(),
+                  SizedBox(height: 40.h),
+                  _buildbanner(isTablet: isTablet),
+                  SizedBox(height: 20.h),
+                  _buildSummaryCards(),
+                  SizedBox(height: 20.h),
+                  _buildStatsContainer(),
+                  SizedBox(height: 20.h),
+                  if (isTablet)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildTopCategoriesChart()),
+                        SizedBox(width: 20.w),
+                        Expanded(child: _buildMonthlyOrdersChart()),
+                      ],
+                    )
+                  else ...[
+                    _buildTopCategoriesChart(),
+                    SizedBox(height: 20.h),
+                    _buildMonthlyOrdersChart(),
+                  ],
+                  SizedBox(height: 20.h),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -80,10 +103,25 @@ class _DashboardState extends State<Dashboard> {
     return Row(
       children: [
         Spacer(),
-        badges.Badge(
-          badgeContent: Text('3',
-              style: fontStyles.bodyText2.copyWith(color: Colors.white)),
-          child: SvgPicture.asset('assets/Group.svg'),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const OrderHistory()));
+          },
+          child: BlocBuilder<GetAllOrdersBloc, GetAllOrdersState>(
+            builder: (context, state) {
+              int count = 0;
+              if (state is GetAllOrdersLoaded) {
+                count = state.getAllOrdersModel.orders?.where((element) => element.orderStatus?.toUpperCase() == 'ORDER_PLACED').length ?? 0;
+              }
+              return badges.Badge(
+                showBadge: count > 0,
+                badgeContent: Text('$count',
+                    style: fontStyles.bodyText2.copyWith(color: Colors.white)),
+                child: SvgPicture.asset('assets/Group.svg'),
+              );
+            },
+          ),
         ),
         SizedBox(width: 24.w),
         GestureDetector(
@@ -102,237 +140,248 @@ class _DashboardState extends State<Dashboard> {
   //
   // [--- THIS SECTION IS MODIFIED ---]
   //
-  Widget _buildbanner() {
-    return Column(
-      children: [
-        BlocBuilder<GetAllBannerBloc, GetAllBannerState>(
-          builder: (context, state) {
-            if (state is GetAllBannerLoaded) {
-              final banner = state.banner;
-              if (banner.banners.isEmpty) {
-                return Container(
-                  height: 200.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[800], // Kept original color
-                    borderRadius: BorderRadius.circular(8.0.r),
-                  ),
-                  child: Center(
-                    // --- Refactored Style ---
-                    child: Text('No Banners Found',
-                        style: fontStyles.primaryTextStyle
-                            .copyWith(color: appColor.textColor2)),
-                  ),
-                );
-              }
-              final bannerImg = banner.banners.toList();
+  Widget _buildbanner({bool isTablet = false}) {
+  return BlocBuilder<GetAllBannerBloc, GetAllBannerState>(
+    builder: (context, state) {
+      if (state is GetAllBannerLoaded) {
+        final banner = state.banner;
 
-              return Column(
-                children: [
-                  CarouselSlider(
-                    carouselController: _carouselController,
-                    items: bannerImg.map((bannerItem) {
-                      // Renamed imageUrl to bannerItem
-                      final String url = (bannerItem.images.isNotEmpty)
-                          ? bannerItem.images[0]
-                          : "";
+        if (banner.banners.isEmpty) {
+          return Container(
+            height: 200.h,
+            decoration: BoxDecoration(
+              color: Colors.grey[800],
+              borderRadius: BorderRadius.circular(8.0.r),
+            ),
+            child: Center(
+              child: Text(
+                'No Banners Found',
+                style: fontStyles.primaryTextStyle
+                    .copyWith(color: appColor.textColor2),
+              ),
+            ),
+          );
+        }
 
-                      if (url.isEmpty || !url.startsWith('http')) {
-                        return _buildErrorImage(); // Assuming _buildErrorImage is updated below
-                      }
+        final bannerImg = banner.banners.toList();
 
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0.r),
-                            child: CachedNetworkImage(
-                              imageUrl: url,
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              errorWidget: (context, url, error) =>
-                                  _buildErrorImage(),
-                              placeholder: (context, url) => Shimmer.fromColors(
-                                baseColor: Colors.grey[900]!,
-                                highlightColor: Colors.grey[800]!,
-                                child: Container(color: Colors.grey[800]),
-                              ),
-                            ),
-                          ),
-                          // --- Delete button passed the correct ID ---
-                          Positioned(
-                            top: 8.h,
-                            right: 8.w, // Positioned top-right
-                            child: _buildbannerDelete(
-                                bannerItem.id, context), // Pass context
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                    options: CarouselOptions(
-                      height: 222.h,
-                      aspectRatio: 16 / 9,
-                      viewportFraction: 0.8,
-                      initialPage: 0,
-                      enableInfiniteScroll: bannerImg.length > 1,
-                      reverse: false,
-                      autoPlay: bannerImg.length > 1,
-                      autoPlayInterval: const Duration(seconds: 3),
-                      autoPlayAnimationDuration:
-                          const Duration(milliseconds: 800),
-                      autoPlayCurve: Curves.fastOutSlowIn,
-                      enlargeCenterPage: true,
-                      enlargeFactor: 0.3,
-                      scrollDirection: Axis.horizontal,
-                      onPageChanged: (index, reason) {
-                        if (mounted) {
-                          // Added mounted check
-                          setState(() {
-                            _currrentBanner = index;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                  // Positioned removed from here
-                  SizedBox(height: 22.h),
-                  if (bannerImg.length > 1)
-                    Padding(
-                      padding: EdgeInsets.only(top: 8.h),
-                      child: AnimatedSmoothIndicator(
-                        activeIndex: _currrentBanner,
-                        count: bannerImg.length,
-                        effect: WormEffect(
-                          dotHeight: 8.h,
-                          dotWidth: 8.w,
-                          spacing: 5.w,
-                          activeDotColor: Colors.white,
-                          dotColor: Colors.grey,
+        return Column(
+          children: [
+            CarouselSlider(
+              carouselController: _carouselController,
+              items: bannerImg.map((bannerItem) {
+                final String url = (bannerItem.images.isNotEmpty)
+                    ? bannerItem.images[0]
+                    : "";
+
+                if (url.isEmpty || !url.startsWith('http')) {
+                  return _buildErrorImage();
+                }
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0.r),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorWidget: (context, url, error) =>
+                            _buildErrorImage(),
+                        placeholder: (context, url) => Shimmer.fromColors(
+                          baseColor: Colors.grey[900]!,
+                          highlightColor: Colors.grey[800]!,
+                          child: Container(color: Colors.grey[800]),
                         ),
-                        onDotClicked: (index) {
-                          _carouselController.animateToPage(index);
-                        },
                       ),
                     ),
-                ],
-              );
-            } else if (state is GetAllBannerError) {
-              return Container(
-                height: 200.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey[800], // Kept original color
-                  borderRadius: BorderRadius.circular(8.0.r),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          color: appColor.errorColor, size: 40.sp),
-                      SizedBox(height: 10.h),
-                      // --- Refactored Style ---
-                      Text("Failed to load banners",
-                          style: fontStyles.errorstyle
-                              .copyWith(color: appColor.textColor2)),
-                    ],
-                  ),
-                ),
-              );
-            } else {
-              // Loading state
-              return SizedBox(
-                height: 222.h,
-                child: Shimmer.fromColors(
-                  baseColor: Colors.grey[900]!,
-                  highlightColor: Colors.grey[800]!,
-                  child: Container(
-                    margin: EdgeInsets.symmetric(horizontal: 20.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[800],
-                      borderRadius: BorderRadius.circular(8.0.r),
+                    Positioned(
+                      top: 8.h,
+                      right: 8.w,
+                      child: _buildbannerDelete(bannerItem.id, context),
                     ),
-                  ),
-                ),
-              );
-            }
-          },
-        )
-      ],
-    );
-  }
-  // [--- END OF MODIFIED SECTION ---]
-
-  // --- UNCHANGED ---
-  Widget _buildSearchBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 41.h,
-            padding: EdgeInsets.symmetric(horizontal: 12.w),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFFCF8E8), width: 2),
-              borderRadius: BorderRadius.circular(10.r),
+                  ],
+                );
+              }).toList(),
+              options: CarouselOptions(
+                height: isTablet ? 280.h : 200.h,
+                aspectRatio: isTablet ? 21 / 9 : 16 / 9,
+                viewportFraction: isTablet ? 0.85 : 0.98,
+                initialPage: 0,
+                enableInfiniteScroll: bannerImg.length > 1,
+                reverse: false,
+                autoPlay: bannerImg.length > 1,
+                autoPlayInterval: const Duration(seconds: 3),
+                autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                autoPlayCurve: Curves.fastOutSlowIn,
+                enlargeCenterPage: true,
+                enlargeFactor: 0.3,
+                scrollDirection: Axis.horizontal,
+                onPageChanged: (index, reason) {
+                  if (!mounted) return;
+                  setState(() {
+                    _currrentBanner = index;
+                  });
+                },
+              ),
             ),
-            child: TextField(
-              style: GoogleFonts.poppins(color: const Color(0x91FCF8E8)),
-              decoration: InputDecoration(
-                hintText: "Search here",
-                hintStyle: GoogleFonts.poppins(
-                    color: const Color(0x91FCF8E8), fontSize: 12.sp),
-                border: InputBorder.none,
+            SizedBox(height: 22.h),
+            if (bannerImg.length > 1)
+              Padding(
+                padding: EdgeInsets.only(top: 8.h),
+                child: AnimatedSmoothIndicator(
+                  activeIndex: _currrentBanner,
+                  count: bannerImg.length,
+                  effect: WormEffect(
+                    dotHeight: 8.h,
+                    dotWidth: 8.w,
+                    spacing: 5.w,
+                    activeDotColor: Colors.white,
+                    dotColor: Colors.grey,
+                  ),
+                  onDotClicked: (index) {
+                    _carouselController.animateToPage(index);
+                  },
+                ),
+              ),
+          ],
+        );
+      } else if (state is GetAllBannerError) {
+        return Container(
+          height: 200.h,
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(8.0.r),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: appColor.errorColor,
+                  size: 40.sp,
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  "Failed to load banners",
+                  style: fontStyles.errorstyle
+                      .copyWith(color: appColor.textColor2),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        // Loading
+        return SizedBox(
+          height: 222.h,
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 20.w),
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(8.0.r),
               ),
             ),
           ),
-        ),
+        );
+      }
+    },
+  );
+}
+
+  // [--- END OF MODIFIED SECTION ---]
+
+  // --- UNCHANGED ---// Add a controller at the top of your State class
+  final TextEditingController _searchController = TextEditingController();
+
+  Widget _buildSearchBar() {
+    return Row(mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        // Expanded(
+        //   child: Container(
+        //     height: 41.h,
+        //     padding: EdgeInsets.symmetric(horizontal: 12.w),
+        //     decoration: BoxDecoration(
+        //       border: Border.all(color: const Color(0xFFFCF8E8), width: 2),
+        //       borderRadius: BorderRadius.circular(10.r),
+        //     ),
+        //     child: TextField(
+        //       controller: _searchController, // Added controller
+        //       onSubmitted: (value) {
+        //         // Trigger search logic here
+        //         print("Searching for: $value");
+        //       },
+        //       style: GoogleFonts.poppins(color: const Color(0x91FCF8E8)),
+        //       decoration: InputDecoration(
+        //         hintText: "Search here",
+        //         hintStyle: GoogleFonts.poppins(
+        //             color: const Color(0x91FCF8E8), fontSize: 12.sp),
+        //         border: InputBorder.none,
+        //         // Optional: Add a clear button
+        //         suffixIcon: IconButton(
+        //           icon: Icon(Icons.clear, size: 16.sp, color: Colors.white70),
+        //           onPressed: () => _searchController.clear(),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
         SizedBox(width: 16.w),
         GestureDetector(
           onTap: () {
+            final pageContext = context;
+
             showDialog(
-              context: context,
-              builder: (context) => Dialog(
+              context: pageContext,
+              builder: (dialogContext) => Dialog(
                 backgroundColor: Colors.transparent,
                 child: InkWell(
+                  borderRadius: BorderRadius.circular(20.r),
                   onTap: () async {
-                    // Pop dialog first
-                    Navigator.of(context).pop();
                     final picker = ImagePicker();
-                    final pickedFile =
-                        await picker.pickImage(source: ImageSource.gallery);
+                    final pickedFile = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 80, // Optional: compress for faster upload
+                    );
 
+                    // 1. Close dialog first
+                    Navigator.of(dialogContext).pop();
+
+                    // 2. Check if mounted and file is not null
                     if (pickedFile != null && mounted) {
-                      // check mounted
-                      print('Selected image: ${pickedFile.path}');
+                      // ✅ CRITICAL FIX: Use .path instead of .name
                       Navigator.push(
-                        context,
+                        pageContext,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              RecentPage(imagePath: pickedFile.path),
+                          builder: (ctx) => RecentPage(imagePath: pickedFile.path),
                         ),
                       );
-                    } else {
-                      print('No image selected or widget unmounted.');
                     }
                   },
                   child: Container(
-                    width: 383
-                        .w, // Consider making this responsive or removing fixed width
+                    width: 383.w,
                     height: 222.h,
-                    padding: EdgeInsets.all(20.w), // Added padding
+                    padding: EdgeInsets.all(20.w),
                     decoration: BoxDecoration(
                       color: const Color(0xFF3C3C3C),
                       borderRadius: BorderRadius.circular(20.r),
                     ),
-                    // Use Column for better layout in Dialog
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SvgPicture.asset('assets/upload.svg',
-                            height: 40.h), // Adjusted size
+                        SvgPicture.asset(
+                          'assets/upload.svg',
+                          height: 40.h,
+                        ),
                         SizedBox(height: 12.h),
                         Text(
                           "Add A Banner Image",
                           style: GoogleFonts.poppins(
-                            // Kept original style here
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
@@ -341,18 +390,19 @@ class _DashboardState extends State<Dashboard> {
                         ),
                         SizedBox(height: 6.h),
                         Text(
-                          "optimal dimensions 383*222",
+                          "Optimal dimensions 383*222",
                           style: GoogleFonts.poppins(
-                            // Kept original style here
                             color: Colors.grey.shade300,
                             fontSize: 12.sp,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: 20.h),
-                        // Using Icon as visual cue, original Stack/Positioned removed
-                        Icon(Icons.add_circle,
-                            color: Colors.white, size: 30.sp),
+                        const Spacer(), // Pushes the icon to the bottom
+                        Icon(
+                          Icons.add_circle,
+                          color: Colors.white,
+                          size: 30.sp,
+                        ),
                       ],
                     ),
                   ),
@@ -360,37 +410,91 @@ class _DashboardState extends State<Dashboard> {
               ),
             );
           },
-          child:
-              SvgPicture.asset('assets/upload.svg'), // Kept original icon here
+          child: SvgPicture.asset('assets/upload.svg'),
         ),
       ],
     );
   }
 
   // --- UNCHANGED ---
-  Widget _buildSummaryCards() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: const [
-          SizedBox(width: 16),
-          SummaryCard(title: 'Total Orders', value: '520', icon: Icons.list),
-          SizedBox(width: 16),
-          SummaryCard(
-              title: 'Total Customers', value: '520', icon: Icons.people),
-          SizedBox(width: 16),
-          SummaryCard(
-              title: 'Total Categories', value: '14', icon: Icons.grid_view),
-          SizedBox(width: 16),
-          SummaryCard(
+ Widget _buildSummaryCards() {
+  return BlocBuilder<DashboardBloc, DashboardState>(
+    builder: (context, state) {
+      if (state is DashboardLoaded) {
+        final data = state.dashboardModel.data;
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.6,
+          children: [
+            SummaryCard(
+              title: 'Total Orders',
+              value: data?.totalOrders?.toString() ?? '0',
+              icon: Icons.list,
+            ),
+            SummaryCard(
+              title: 'Total Customers',
+              value: data?.totalUsers?.toString() ?? '0',
+              icon: Icons.people,
+            ),
+            SummaryCard(
+              title: 'Total Categories',
+              value: data?.totalCategories?.toString() ?? '0',
+              icon: Icons.grid_view,
+            ),
+            SummaryCard(
               title: 'Total Revenue',
-              value: '\u20B925800', // Consider formatting currency
-              icon: Icons.credit_card),
-          SizedBox(width: 16),
-        ],
-      ),
-    );
-  }
+              value: '₹${(data?.totalRevenue ?? 0).toStringAsFixed(2)}',
+              icon: Icons.credit_card,
+            ),
+          ],
+        );
+      }
+
+      if (state is DashboardError) {
+        return SizedBox(
+          height: 100.h,
+          child: Center(
+            child: Text(
+              "Data Error: ${state.message}\n(Check Model Types)",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: appColor.errorColor,
+                fontSize: 12.sp,
+              ),
+            ),
+          ),
+        );
+      }
+
+      // ✅ Shimmer Loading Grid
+      return GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.6,
+        children: List.generate(
+          4,
+          (index) => Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: const SummaryCard(
+              title: 'Loading...',
+              value: '...',
+              icon: Icons.hourglass_empty,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
   // --- UNCHANGED ---
   Widget _buildStatsContainer() {
@@ -400,43 +504,68 @@ class _DashboardState extends State<Dashboard> {
         color: const Color(0xff292727),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              StatCard(
-                label: 'New Orders',
-                value: '54',
-                icon: Icons.receipt_long,
+      child: BlocBuilder<DashboardBloc, DashboardState>(
+        builder: (context, state) {
+          if (state is DashboardLoaded) {
+            final data = state.dashboardModel.data;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    StatCard(
+                      label: 'New Orders',
+                      value: data?.newOrders?.toString() ?? '0',
+                      icon: Icons.receipt_long,
+                      position: CrossAxisAlignment.start,
+                    ),
+                    StatCard(
+                      label: 'Out for Delivery',
+                      value: data?.shippedOrders?.toString() ?? '0',
+                      icon: Icons.local_shipping,
+                      position: CrossAxisAlignment.end,
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16.h),
+                const Divider(color: Color(0xffFFFFFF)),
+                SizedBox(height: 16.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    StatCard(
+                      label: 'Delivered',
+                      value: data?.deliveredOrders?.toString() ?? '0',
+                      icon: Icons.delivery_dining,
+                      position: CrossAxisAlignment.start,
+                    ),
+                    StatCard(
+                      label: 'Cancelled',
+                      value: data?.canceledOrders?.toString() ?? '0',
+                      icon: Icons.cancel,
+                      position: CrossAxisAlignment.end,
+                    ),
+                  ],
+                ),
+              ],
+            );
+          } else if (state is DashboardError) {
+            return Center(
+              child: Text(
+                "Error: ${state.message}",
+                style: GoogleFonts.poppins(color: appColor.errorColor, fontSize: 12.sp),
+                textAlign: TextAlign.center,
               ),
-              StatCard(
-                label: 'Out for Delivery',
-                value: '60',
-                icon: Icons.local_shipping,
-              ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          const Divider(color: Color(0xffFFFFFF)), // Consider lighter color
-          SizedBox(height: 16.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              StatCard(
-                label: 'Delivered',
-                value: '78',
-                icon: Icons.delivery_dining,
-              ),
-              StatCard(
-                label: 'Cancelled',
-                value: '20',
-                icon: Icons.cancel,
-              ),
-            ],
-          ),
-        ],
+            );
+          }
+          // Shimmer for loading state
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: Container(height: 150.h, color: Colors.black),
+          );
+        },
       ),
     );
   }
@@ -662,18 +791,22 @@ class StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final CrossAxisAlignment position;
+
+   
 
   const StatCard({
     super.key, // Added key
     required this.label,
     required this.value,
     required this.icon,
+    required this.position ,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:position,
       children: [
         Text(
           label,
@@ -775,6 +908,10 @@ Widget _buildbannerDelete(String bannerId, BuildContext context) {
                   BlocProvider.of<DeleteBannerBloc>(context)
                       .add(fetchDeleteBannerEvent(BnnerId: bannerId));
                   Navigator.of(dialogContext).pop();
+                          BlocProvider.of<GetAllBannerBloc>(context).add(FetchGetAllBannerEvent());
+
+
+
                 },
               ),
             ],

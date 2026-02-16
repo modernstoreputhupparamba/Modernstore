@@ -22,7 +22,7 @@ class _SuccessCartState extends State<SuccessCart>
     super.initState();
     _blinkController = AnimationController(
       duration: const Duration(
-          milliseconds: 1000), // Very slow blink - 1 second each way
+          milliseconds: 800), // Very slow blink - 1 second each way
       vsync: this,
     );
 

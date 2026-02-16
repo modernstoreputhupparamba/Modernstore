@@ -14,13 +14,14 @@ import 'package:modern_grocery/widgets/fontstyle.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../bottom_navigationbar.dart';
+
 class VerifyScreen extends StatefulWidget {
-  final String PhoneNo; // Display format: +91 1234567890
+  final String phoneNo;
 
   const VerifyScreen({
     super.key,
-    required this.PhoneNo,
-    required String phoneNumber,
+    required this.phoneNo,
   });
 
   @override
@@ -30,14 +31,14 @@ class VerifyScreen extends StatefulWidget {
 class _VerifyScreenState extends State<VerifyScreen> {
   final List<TextEditingController> otpControllers =
       List.generate(6, (index) => TextEditingController());
-  final List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
-  bool isLoading = false;
-  bool isAdmin = true;
-  bool isLoadingAdminStatus = true;
 
-  String cleanNumber(String number) {
-    return number.replaceAll(RegExp(r'^\+91'), '');
-  }
+  final List<FocusNode> focusNodes =
+      List.generate(6, (index) => FocusNode());
+
+  bool isLoading = false;
+  bool isAdmin = false;
+  bool isLoadingAdminStatus = true;
+  String userId = '';
 
   @override
   void initState() {
@@ -45,9 +46,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
     _checkAdminStatus();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        focusNodes[0].requestFocus();
-      }
+      if (mounted) focusNodes[0].requestFocus();
     });
   }
 
@@ -63,25 +62,23 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 
   String getOTP() {
-    return otpControllers.map((controller) => controller.text).join();
+    return otpControllers.map((c) => c.text).join();
   }
 
-  // --- Check Admin Status ---
+  // ✅ Check Admin Status Safely
   Future<void> _checkAdminStatus() async {
-    setState(() {
-      isLoadingAdminStatus = true;
-    });
+    setState(() => isLoadingAdminStatus = true);
+
     try {
       final prefs = await SharedPreferences.getInstance();
+
       final role = prefs.getString('role');
       final userType = prefs.getString('userType');
       final isAdminFlag = prefs.getBool('isAdmin');
+      userId = prefs.getString('userId') ?? '';
 
-      // Determine if user is admin based on stored values
-      final bool isAdminResult = role == 'admin' ||
-          role == 'Admin' ||
-          userType == 'admin' ||
-          userType == 'Admin' ||
+      final bool isAdminResult = role?.toLowerCase() == 'admin' ||
+          userType?.toLowerCase() == 'admin' ||
           isAdminFlag == true;
 
       if (mounted) {
@@ -91,8 +88,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
         });
       }
     } catch (e) {
-      print("Error checking admin status: $e");
-
       if (mounted) {
         setState(() {
           isAdmin = false;
@@ -121,7 +116,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
     BlocProvider.of<VerifyBloc>(context).add(
       fetchVerifyOTPEvent(
-        phoneNumber: widget.PhoneNo,
+        phoneNumber: widget.phoneNo,
         otp: otp,
       ),
     );
@@ -131,12 +126,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
     for (var controller in otpControllers) {
       controller.clear();
     }
-    if (mounted) {
-      focusNodes[0].requestFocus();
-    }
+
+    focusNodes[0].requestFocus();
 
     BlocProvider.of<VerifyBloc>(context).add(
-      ResendOTPRequested(phoneNumber: widget.PhoneNo),
+      ResendOTPRequested(phoneNumber: widget.phoneNo),
     );
   }
 
@@ -147,6 +141,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
         return BlocListener<VerifyBloc, VerifyState>(
           listener: (context, state) {
             ScaffoldMessenger.of(context).clearSnackBars();
+
+            if (state is VerifyLoading) {
+              setState(() => isLoading = true);
+            }
 
             if (state is VerifySuccess) {
               setState(() => isLoading = false);
@@ -162,32 +160,43 @@ class _VerifyScreenState extends State<VerifyScreen> {
               );
 
               Future.delayed(const Duration(milliseconds: 500), () {
-                if (mounted) {
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              !isAdmin ? AdminNavibar() : LocationPage()));
-                }
+                if (!mounted) return;
+
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) {
+                      if (isAdmin) {
+                        return AdminNavibar();
+                      } else {
+                        return userId.isEmpty
+                            ? LocationPage()
+                            : NavigationBarWidget(initialIndex: 0);
+                      }
+                    },
+                  ),
+                );
               });
-            } else if (state is VerifyError) {
+            }
+
+            if (state is VerifyError) {
               setState(() => isLoading = false);
 
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("filed_verfication"),
+                const SnackBar(
+                  content: Text("Failed verification"),
                   backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 3),
                 ),
               );
 
               for (var controller in otpControllers) {
                 controller.clear();
               }
-              if (mounted) {
-                focusNodes[0].requestFocus();
-              }
-            } else if (state is OTPResent) {
+
+              focusNodes[0].requestFocus();
+            }
+
+            if (state is OTPResent) {
               setState(() => isLoading = false);
 
               ScaffoldMessenger.of(context).showSnackBar(
@@ -195,26 +204,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   content: Text(
                     languageService.getString('otp_resent'),
                   ),
-                  backgroundColor: Colors.blue, // Use blue for info
-                  duration: const Duration(seconds: 2),
+                  backgroundColor: Colors.blue,
                 ),
               );
-            } else if (state is VerifyLoading) {
-              setState(() => isLoading = true);
-
-              // Optional: Show a persistent "Verifying..." SnackBar
-              // ScaffoldMessenger.of(context).showSnackBar(
-              //   SnackBar(
-              //     content: Row(
-              //       children: [
-              //         const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
-              //         const SizedBox(width: 20),
-              //         Text(languageService.getString('processing')),
-              //       ],
-              //     ),
-              //     duration: const Duration(seconds: 30), // Long duration, cleared on success/error
-              //   ),
-              // );
             }
           },
           child: Scaffold(
@@ -223,13 +215,14 @@ class _VerifyScreenState extends State<VerifyScreen> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: BackButton(
-                color: Color(0xffFCF8E8),
+                color: const Color(0xffFCF8E8),
                 onPressed: () {
                   Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EnterScreen(),
-                      ));
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EnterScreen(),
+                    ),
+                  );
                 },
               ),
             ),
@@ -247,28 +240,19 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         color: const Color(0xFFF5E9B5),
                         fontSize: 29.sp,
                         fontWeight: FontWeight.w600,
-                        height: 1.38,
                       ),
                     ),
-                    Text(
-                      languageService.getString('sent_on_whatsapp'),
-                      style: GoogleFonts.poppins(
-                        color: const Color(0xFFF5E9B5),
-                        fontSize: 29.sp,
-                        fontWeight: FontWeight.w600,
-                        height: 1.38,
-                      ),
-                    ),
-                    SizedBox(height: 25.h),
+
+                    SizedBox(height: 10.h),
 
                     Text(
-                      '${languageService.getString('sent_to')} +91${widget.PhoneNo}',
+                      '${languageService.getString('sent_to')} ${widget.phoneNo}',
                       style: GoogleFonts.poppins(
                         color: const Color(0xB7FCF8E8),
                         fontSize: 17.sp,
-                        fontWeight: FontWeight.w400,
                       ),
                     ),
+
                     SizedBox(height: 56.h),
 
                     Row(
@@ -287,131 +271,95 @@ class _VerifyScreenState extends State<VerifyScreen> {
                             ),
                             borderRadius: BorderRadius.circular(15),
                           ),
-                          child: TextField(
-                            controller: otpControllers[index],
-                            focusNode: focusNodes[index],
-                            textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
-                            maxLength: 1,
-                            style: GoogleFonts.poppins(
-                              color: Color(0xFFFCF8E8),
-                              fontSize: 22.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            onChanged: (value) {
-                              setState(() {});
-
-                              if (value.isNotEmpty && index < 5) {
-                                if (mounted)
+                          child: Focus(
+                            onFocusChange: (_) => setState(() {}),
+                            child: TextField(
+                              controller: otpControllers[index],
+                              focusNode: focusNodes[index],
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              maxLength: 1,
+                              style: GoogleFonts.poppins(
+                                color: const Color(0xFFFCF8E8),
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: const InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              onChanged: (value) {
+                                if (value.isNotEmpty && index < 5) {
                                   focusNodes[index + 1].requestFocus();
-                              } else if (value.isEmpty && index > 0) {
-                                // Move to previous field on backspace
-                                if (mounted)
+                                } else if (value.isEmpty && index > 0) {
                                   focusNodes[index - 1].requestFocus();
-                              }
-
-                              if (index == 5 && value.isNotEmpty) {
-                                final otp = getOTP();
-                                if (otp.length == 6) {
-                                  FocusScope.of(context).unfocus();
-
-                                  Future.delayed(
-                                      const Duration(milliseconds: 300), () {
-                                    if (mounted) _handleVerify(context);
-                                  });
                                 }
-                              }
-                            },
+
+                                if (getOTP().length == 6) {
+                                  FocusScope.of(context).unfocus();
+                                  _handleVerify(context);
+                                }
+                              },
+                            ),
                           ),
                         );
                       }),
                     ),
+
                     SizedBox(height: 56.h),
 
                     Center(
                       child: GestureDetector(
                         onTap:
                             isLoading ? null : () => _handleResendOTP(context),
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: languageService
-                                    .getString('didnt_receive_code'),
-                                style: GoogleFonts.poppins(
-                                  color: const Color(0xD8FCF8E8),
-                                  fontSize: 13.sp,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' ', // Add space
-                                style: GoogleFonts.poppins(fontSize: 13.sp),
-                              ),
-                              TextSpan(
-                                text: languageService.getString('resend_code'),
-                                style: GoogleFonts.poppins(
-                                  color: isLoading
-                                      ? const Color(
-                                          0x80F5E9B5) // Dim if loading
-                                      : const Color(0xFFF5E9B5),
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w700,
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ],
+                        child: Text(
+                          languageService.getString('resend_code'),
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFF5E9B5),
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
                     ),
+
                     SizedBox(height: 40.h),
 
                     Center(
                       child: GestureDetector(
-                        onTap: isLoading ? null : () => _handleVerify(context),
+                        onTap:
+                            isLoading ? null : () => _handleVerify(context),
                         child: Container(
                           width: 281.w,
                           height: 54.h,
-                          decoration: ShapeDecoration(
+                          decoration: BoxDecoration(
                             color: isLoading
                                 ? appColor.loadingColor
                                 : appColor.textColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25.r),
-                            ),
+                            borderRadius: BorderRadius.circular(25.r),
                           ),
                           child: Center(
                             child: isLoading
-                                ? SizedBox(
-                                    width: 24.w,
-                                    height: 24.h,
-                                    child: CircularProgressIndicator(
-                                      color: appColor.textColor3,
-                                      strokeWidth: 2.5,
-                                    ),
+                                ? const CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   )
                                 : Text(
                                     languageService.getString('verify'),
                                     style: fontStyles.bodyText2.copyWith(
                                       color: appColor.textColor3,
                                       fontSize: 18.sp,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 40.h), // Bottom padding
+
+                    SizedBox(height: 40.h),
                   ],
                 ),
               ),

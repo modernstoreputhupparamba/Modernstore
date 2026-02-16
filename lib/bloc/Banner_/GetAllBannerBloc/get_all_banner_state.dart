@@ -9,9 +9,10 @@ final class GetAllBannerLoading extends GetAllBannerState {}
 
 final class GetAllBannerLoaded extends GetAllBannerState {
   final GetAllBannerModel banner;
-  
-  GetAllBannerLoaded(this.banner);
+
+  GetAllBannerLoaded({required this.banner});
 }
+
 
 final class GetAllBannerError extends GetAllBannerState {
   final String errorMessage;

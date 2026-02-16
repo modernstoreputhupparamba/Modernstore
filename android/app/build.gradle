@@ -9,21 +9,25 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    defaultConfig {
-        applicationId = "com.example.modern_grocery"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
+ defaultConfig {
+    applicationId = "com.example.modern_grocery"
+
+    // ✅ FIX: force minSdk 21
+    minSdk = 21
+
+    targetSdk = flutter.targetSdkVersion
+    versionCode = flutter.versionCode
+    versionName = flutter.versionName
+}
 
     compileOptions {
-        // Java 21
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        // Use Java 1.8 (like your other projects)
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
+        // Match Kotlin JVM target to Java 21
         jvmTarget = "21"
     }
 
@@ -63,7 +67,7 @@ flutter {
     source = "../.."
 }
 
-// Force Kotlin to use Java 21 toolchain
-kotlin {
-    jvmToolchain(21)
-}
+// ❌ Remove this whole block (it forces Java 21)
+// kotlin {
+//     jvmToolchain(21)
+// }

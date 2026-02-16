@@ -1,6 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
-import 'package:modern_grocery/repositery/api/Delivery/getUserProfile_api.dart';
+import 'package:modern_grocery/repositery/api/User/getUserProfile_api.dart';
 import 'package:modern_grocery/repositery/model/user/getUserProfile.dart';
 
 part 'userprofile_event.dart';
@@ -16,7 +16,9 @@ class UserprofileBloc extends Bloc<UserprofileEvent, UserprofileState> {
       emit(Userprofileloading());
       try {
         getUserProfile = await getuserprofileApi.getGetUserProfile();
-        emit(Userprofileloaded());
+        emit(Userprofileloaded(
+          user: getUserProfile,
+        ));
       } catch (e) {
         print('UserProfile Error: $e');
      

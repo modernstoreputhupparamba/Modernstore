@@ -1,99 +1,94 @@
-import 'dart:async';
-import 'dart:io';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'package:modern_grocery/main.dart';
+import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:modern_grocery/repositery/api/api_client.dart';
 import 'package:modern_grocery/repositery/model/Banner/CreateBanner_model.dart';
 
-class CreatebannerApi {
+class CreateBannerApi {
+  final ApiClient _apiClient;
+
+  CreateBannerApi({ApiClient? apiClient})
+      : _apiClient = apiClient ?? ApiClient();
+
   Future<CreateBannerModel> uploadBanner({
-    required String title,
-    required String category,
+    required File imageFile,
     required String type,
-    required String categoryId,
-    required String link,
-    required String imagePath,
+    String? title,
+    String? category,
+    String? categoryId,
+    String? productId,
+    String? link,
     void Function(int sent, int total)? onSendProgress,
   }) async {
-    final file = File(imagePath);
-    if (!file.existsSync()) {
-      throw Exception('Image file not found at path: $imagePath');
+    const String path = '/banner/create';
+
+    // ✅ Validate required combinations before API call
+    if (type == "product" && (productId == null || productId.isEmpty)) {
+      throw Exception("Product ID is required for product type banner");
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    final role = prefs.getString('role');
-    print('Stored token: $token');
-    print('User role: $role');
-
-    if (token == null || token.isEmpty) {
-      throw Exception('Access token not found. Please log in again.');
-    }
-    if (role != 'adimin') {
-      throw Exception('Unauthorized: Only admins can create banners.');
+    if (type == "category" && (categoryId == null || categoryId.isEmpty)) {
+      throw Exception("Category ID is required for category type banner");
     }
 
-    final uri = Uri.parse('$basePath/banner/create');
-    final request = http.MultipartRequest('POST', uri);
+    if (!imageFile.existsSync()) {
+      throw Exception("Image file does not exist");
+    }
 
-    request.headers['Authorization'] = 'Bearer $token';
-    request.headers['Content-Type'] = 'multipart/form-data';
-
-    request.fields.addAll({
-      'title': title,
-      'category': category,
+    final Map<String, String> body = {
       'type': type,
-      'categoryId': categoryId,
-      'link': link,
-    });
-    print('Form fields: ${request.fields}');
+      if (title != null && title.isNotEmpty) 'title': title,
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (categoryId != null && categoryId.isNotEmpty)
+        'categoryId': categoryId,
+      if (productId != null && productId.isNotEmpty)
+        'productId': productId,
+      if (link != null && link.isNotEmpty) 'link': link,
+    };
 
-    final fileName = file.path.split('/').last;
-    final extension = fileName.split('.').last.toLowerCase();
-    final contentType = MediaType('image', extension == 'png' ? 'png' : 'jpeg');
+    final Map<String, File> files = {
+      'images': imageFile,
+    };
 
-    // --- Start of Custom Upload Progress Logic ---
-    // Read the file as a stream
-    final fileStream = file.openRead();
-    final totalLength = await file.length();
+    try {
+      debugPrint("🚀 Banner Upload Request: $body");
 
-    int bytesSent = 0;
+      final Response response = await _apiClient.invokeAPI(
+        path,
+        'POST_MULTIPART',
+        body,
+        files: files,
+      );
 
-    // Create a new Stream that wraps the file stream and reports progress
-    final progressStream = StreamTransformer<List<int>, List<int>>.fromHandlers(
-      handleData: (data, sink) {
-        bytesSent += data.length;
-        onSendProgress?.call(bytesSent, totalLength);
-        sink.add(data);
-      },
-    ).bind(fileStream);
+      debugPrint("📥 Response (${response.statusCode}): ${response.body}");
 
-    final multipartFile = http.MultipartFile(
-      'image',
-      progressStream,
-      totalLength,
-      filename: fileName,
-      contentType: contentType,
-    );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> jsonData =
+            json.decode(response.body) as Map<String, dynamic>;
 
-    request.files.add(multipartFile);
+        _sanitizeResponse(jsonData);
 
-    // Send the request
-    final streamedResponse = await request.send();
+        return CreateBannerModel.fromJson(jsonData);
+      }
 
-    // Now, listen to the actual response stream from the server
-    final response = await http.Response.fromStream(streamedResponse);
-    print("📦 Response: ${response.statusCode} => ${response.body}");
-
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
-      return CreateBannerModel.fromJson(jsonData);
-    } else {
       throw Exception(
-          'Upload failed with status ${response.statusCode}: ${response.body}');
+        "Upload failed [${response.statusCode}]: ${response.body}",
+      );
+    } catch (e) {
+      throw Exception("Banner upload failed: $e");
+    }
+  }
+
+  /// Cleans null string values from backend response
+  void _sanitizeResponse(Map<String, dynamic> jsonData) {
+    if (jsonData['banner'] != null && jsonData['banner'] is Map) {
+      final banner = jsonData['banner'];
+
+      banner['link'] ??= '';
+      banner['productId'] ??= '';
+      banner['categoryId'] ??= '';
     }
   }
 }

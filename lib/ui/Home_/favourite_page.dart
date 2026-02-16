@@ -5,13 +5,16 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:modern_grocery/bloc/wishList/GetToWishlist_bloc/get_to_wishlist_bloc.dart';
 import 'package:modern_grocery/bloc/wishList/remove%20towish/removetowishlist_bloc.dart';
-import 'package:modern_grocery/repositery/model/getToWishlist_model.dart';
+import 'package:modern_grocery/repositery/model/Wishlist/getToWishlist_model.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/bottom_navigationbar.dart';
 import 'package:modern_grocery/ui/cart_/success_cart.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+
+import '../../bloc/cart_/addCart_bloc/add_cart_bloc.dart';
+import '../../localization/app_localizations.dart';
 
 class FavouritePage extends StatefulWidget {
   final VoidCallback? onFavTap;
@@ -24,6 +27,9 @@ class FavouritePage extends StatefulWidget {
 
 class _FavouritePageState extends State<FavouritePage> {
   late GetToWishlistModel data;
+  bool _isLoading = false;
+  final Set<String> _selectedItems = {};
+
 
   @override
   void initState() {
@@ -32,161 +38,219 @@ class _FavouritePageState extends State<FavouritePage> {
     BlocProvider.of<GetToWishlistBloc>(context).add(fetchGetToWishlistEvent());
   }
 
-  // final List<Map<String, dynamic>> favourites = [
-  //   {
-  //     'name': 'Banana',
-  //     'image': 'assets/Banana.png',
-  //     'price': 80,
-  //     'mrp': 100,
-  //   },
-  //   {
-  //     'name': 'Carrot',
-  //     'image': 'assets/Carrot.png',
-  //     'price': 80,
-  //     'mrp': 100,
-  //   },
-  // ];
-
   @override
   Widget build(BuildContext context) {
     return Consumer<LanguageService>(
       builder: (context, languageService, child) {
-        return Scaffold(
-          backgroundColor: Color(0XFF0A0909),
-          body: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 11.w),
-            child: Column(
-              children: [
-                SizedBox(height: 64.h),
-                Row(
-                  children: [
-                    SizedBox(width: 40.w),
-                    BackButton(
-                      color: appColor.primaryText,
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NavigationBarWidget(),
-                          ),
-                        );
-                      },
+              final lang = languageService.currentLanguage;
+        return BlocListener<AddCartBloc, AddCartState>(
+          listener: (context, state) {
+
+ if (state is AddCartLoading) {
+              setState(() {
+                _isLoading = true;
+              });
+            }
+            if (state is AddCartLoaded) {
+              if (state.response.success) {
+                setState(() {
+                  _isLoading = false;
+                });
+                // ✅ Show success screen and pop back
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SuccessCart()),
+                );
+                Future.delayed(const Duration(seconds: 2), () {
+                  Navigator.of(context).pop();
+                });
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      state.response.message.isNotEmpty
+                          ? state.response.message
+                          : AppLocalizations.getString(
+                              'failed_add_to_cart',
+                              lang,
+                            ),
                     ),
-                    Spacer(),
-                    IconButton(
-                      icon: Icon(
-                        Icons.shopping_cart_outlined,
-                        size: 22.sp,
-                        color: appColor.primaryText,
-                      ),
-                      onPressed: () {
-                        if (widget.onFavTap != null) {
-                          widget.onFavTap!();
-                        }
-                      },
-                    ),
-                    SizedBox(width: 40.w),
-                  ],
-                ),
-                SizedBox(height: 9.h),
-                Center(
-                  child: Text(
-                    languageService.getString('favorites'),
-                    style: GoogleFonts.poppins(
-                      color: appColor.primaryText,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.24,
-                    ),
+                    backgroundColor: Colors.red,
                   ),
+                );
+              }
+            } else if (state is AddCartError) {
+               setState(() {
+                  _isLoading = false;
+                });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Add to cart failed: ${state.message}',
+                  ),
+                  backgroundColor: Colors.red,
                 ),
-                SizedBox(height: 16.h),
-                BlocBuilder<GetToWishlistBloc, GetToWishlistState>(
-                    builder: (context, state) {
-                  if (state is GetToWishlistLoading) {
-                    return Expanded(
-                      child: Column(
-                        children: List.generate(5, (index) => buildShimmer()),
+              );
+            }
+
+
+            // TODO: implement listener
+          },
+          child: Scaffold(
+            backgroundColor: Color(0XFF0A0909),
+            body: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                children: [
+                  SizedBox(height: 64.h),
+                  Row(
+                    children: [
+                      // SizedBox(width: 24.w),
+                      BackButton(
+                        color: appColor.primaryText,
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NavigationBarWidget(initialIndex: 0,),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  }
-                  if (state is GetToWishlistError) {
-                    return Center(
-                        child: Text(languageService.getString('error')));
-                  }
-
-                  if (state is GetToWishlistLoaded) {
-                    final favourites =
-                        BlocProvider.of<GetToWishlistBloc>(context)
-                            .getToWishlistModel;
-                    final wishlistItems = favourites.wishlists ?? [];
-
-                    if (wishlistItems.isEmpty) {
-                      return Center(
+                      Spacer(),
+                      Center(
                         child: Text(
-                          languageService.getString('no_favorites'),
-                          style: GoogleFonts.poppins(color: Colors.white),
+                          languageService.getString('favorites'),
+                          style: GoogleFonts.poppins(
+                            color: appColor.primaryText,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.24,
+                          ),
+                        ),
+                      ),
+                      Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          Icons.shopping_cart_outlined,
+                          size: 22.sp,
+                          color: appColor.primaryText,
+                        ),
+                        onPressed: () {
+                          if (widget.onFavTap != null) {
+                            widget.onFavTap!();
+                          }
+                        },
+                      ),
+                      // SizedBox(width: 24.w),
+                    ],
+                  ),
+                  SizedBox(height: 9.h),
+                  SizedBox(height: 16.h),
+                  BlocBuilder<GetToWishlistBloc, GetToWishlistState>(
+                      builder: (context, state) {
+                    if (state is GetToWishlistLoading) {
+                      return Expanded(
+                        child: Column(
+                          children: List.generate(5, (index) => buildShimmer()),
                         ),
                       );
                     }
+                    if (state is GetToWishlistError) {
+                      return Center(
+                          child: Text(languageService.getString('error')));
+                    }
 
-                    return Expanded(
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: ListView.builder(
-                              itemCount: wishlistItems.length,
-                              itemBuilder: (context, index) {
-                                final item = wishlistItems[index];
-                                return FavouriteItemCard(
-                                  item: item.toJson(),
-                                  languageService: languageService,
-                                );
-                              },
-                            ),
+                    if (state is GetToWishlistLoaded) {
+                      final favourites =
+                          BlocProvider.of<GetToWishlistBloc>(context)
+                              .getToWishlistModel;
+                      final wishlistItems = favourites.wishlists ?? [];
+
+                      if (wishlistItems.isEmpty) {
+                        return Center(
+                          child: Text(
+                            languageService.getString('no_favorites'),
+                            style: GoogleFonts.poppins(color: Colors.white),
                           ),
+                        );
+                      }
 
-                          /// ✅ Button only shows if wishlist has items
-                          Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: SizedBox(
-                              height: 40.h,
-                              width: 204.w,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xffF5E9B5),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25.r),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const SuccessCart(),
-                                    ),
+                      return Expanded(
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: wishlistItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = wishlistItems[index];
+                                  return FavouriteItemCard(
+                                    item: item.toJson(),
+                                    languageService: languageService,
+                                    isSelected: _selectedItems.contains(
+                                        item.productId?.id), // Check if item is selected
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedItems.add(item.productId!.id!);
+                                        } else {
+                                          _selectedItems.remove(item.productId!.id!);
+                                        }
+                                      });
+                                    },
                                   );
                                 },
-                                child: Center(
-                                  child: Text(
-                                    languageService.getString('add_to_cart'),
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.black,
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.w500,
+                              ),
+                            ),
+
+                            /// ✅ Button only shows if wishlist has items
+                            Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24.h),
+                              child: SizedBox(
+                                height: 48.h,
+                                width: 380.w,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xffF5E9B5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.r),
+                                    ),
+                                  ), // Disable button if no items are selected or if loading
+                                  onPressed:
+                                      _selectedItems.isEmpty || _isLoading
+                                          ? null
+                                          : () {
+                                              for (var productId
+                                                  in _selectedItems) {
+                                                context.read<AddCartBloc>().add(
+                                                    FetchAddCart(
+                                                        productId: productId,
+                                                        quantity: 1));
+                                              }
+                                            },
+                                  child: Center(
+                                    child:_isLoading
+                                        ? const CircularProgressIndicator()
+                                        : Text(
+                                      languageService.getString('add_to_cart'),
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.black,
+                                        fontSize: 18.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return Container();
-                }),
-              ],
+                          ],
+                        ),
+                      );
+                    }
+                    return Container();
+                  }),
+                ],
+              ),
             ),
           ),
         );
@@ -198,11 +262,15 @@ class _FavouritePageState extends State<FavouritePage> {
 class FavouriteItemCard extends StatefulWidget {
   final Map<String, dynamic> item;
   final LanguageService languageService;
+  final bool isSelected;
+  final ValueChanged<bool> onSelected;
 
   const FavouriteItemCard({
     Key? key,
     required this.item,
     required this.languageService,
+    required this.isSelected,
+    required this.onSelected,
   }) : super(key: key);
 
   @override
@@ -210,8 +278,6 @@ class FavouriteItemCard extends StatefulWidget {
 }
 
 class _FavouriteItemCardState extends State<FavouriteItemCard> {
-  bool isSelected = false;
-
   @override
   Widget build(BuildContext context) {
     final product = widget.item['productId'];
@@ -256,8 +322,8 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                           child: Image.network(
                             imageUrl,
                             fit: BoxFit.contain,
-                            width: 70.w,
-                            height: 70.h,
+                            width: 120.w,
+                            height: 80.h,
                             errorBuilder: (context, error, stackTrace) {
                               return const Icon(Icons.image_not_supported,
                                   color: Colors.grey);
@@ -273,9 +339,7 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                     left: 10.w,
                     child: GestureDetector(
                       onTap: () {
-                        setState(() {
-                          isSelected = !isSelected;
-                        });
+                        widget.onSelected(!widget.isSelected);
                       },
                       child: Container(
                         height: 22.h,
@@ -284,7 +348,7 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                           color: const Color(0xFFEFECE1),
                           shape: BoxShape.circle,
                         ),
-                        child: isSelected
+                        child: widget.isSelected
                             ? Icon(Icons.check,
                                 size: 16.sp, color: Colors.black)
                             : null,
@@ -351,14 +415,17 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
               children: [
                 InkWell(
                   onTap: () {
-                    final productId = widget.item['productId']?['_id'];
+                    final productId = widget.item['productId'];
+                    final id = productId['_id'];
                     if (productId != null) {
                       context
                           .read<RemovetowishlistBloc>()
-                          .add(fetchRemovetowishlistEvent(productId));
-                      // Future.delayed(const Duration(milliseconds: 300), () {
-                      //   context.read<GetToWishlistBloc>().add(fetchGetToWishlistEvent());
-                      // });
+                          .add(fetchRemovetowishlistEvent(id));
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        context
+                            .read<GetToWishlistBloc>()
+                            .add(fetchGetToWishlistEvent());
+                      });
                     }
                   },
                   child: CircleAvatar(

@@ -254,10 +254,11 @@ class _ManualLocationState extends State<ManualLocation> {
           String chosenAddress = selectedAddressType == 'current'
               ? currentLocation
               : (apiAddress ?? '');
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-                builder: (context) => const NavigationBarWidget()),
+                builder: (context) => const NavigationBarWidget(initialIndex: 0,)),
+                (route) => false,
           );
         },
         style: ElevatedButton.styleFrom(

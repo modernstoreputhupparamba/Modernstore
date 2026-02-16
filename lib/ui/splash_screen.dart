@@ -20,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     _checkLoginStatus();
   }
+  String UserId='';
 
   Future<void> _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
@@ -30,6 +31,8 @@ class _SplashScreenState extends State<SplashScreen> {
     final role = prefs.getString('role');
     final userType = prefs.getString('userType');
     final isAdminFlag = prefs.getBool('isAdmin');
+    UserId = prefs.getString('userId') ?? '';
+
 
     final bool isAdmin = role == 'admin' ||
         role == 'Admin' ||
@@ -43,9 +46,10 @@ class _SplashScreenState extends State<SplashScreen> {
       () {
         if (!mounted) return; // Always check if widget is still mounted
 
-        if (token != null && token.isNotEmpty) {
+print(UserId);
+        if (token != null && token.isNotEmpty && UserId.isNotEmpty) {
           // --- THIS IS THE UPDATED REDIRECT ---
-          if (!isAdmin) {
+          if (isAdmin&&UserId.isNotEmpty) {
             // Send admins to AdminNavibar
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const AdminNavibar()),
@@ -53,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
           } else {
             // Send regular users to LocationPage
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => NavigationBarWidget()),
+              MaterialPageRoute(builder: (context) => NavigationBarWidget(initialIndex: 0,)),
             );
           }
         } else {
