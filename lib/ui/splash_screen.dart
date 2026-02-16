@@ -57,7 +57,7 @@ print(UserId);
           } else {
             // Send regular users to LocationPage
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => NavigationBarWidget()),
+              MaterialPageRoute(builder: (context) => NavigationBarWidget(initialIndex: 0,)),
             );
           }
         } else {

@@ -9,7 +9,7 @@ part 'create_banner_event.dart';
 part 'create_banner_state.dart';
 
 class CreateBannerBloc extends Bloc<CreateBannerEvent, CreateBannerState> {
-  final CreatebannerApi api;
+  final CreateBannerApi  api;
 
   CreateBannerBloc({required this.api}) : super(CreateBannerInitial()) {
     on<FetchCreateBannerEvent>((event, emit) async {
@@ -20,11 +20,13 @@ class CreateBannerBloc extends Bloc<CreateBannerEvent, CreateBannerState> {
           category: event.category,
           type: event.type,
           categoryId: event.categoryId,
+          productId: event.productId,
           link: event.link,
           imageFile: event.imagePath,        // ✅ File -> File
           onSendProgress: event.onSendProgress, // ❗ but unused in API
         );
         emit(CreateBannerLoaded(result: result));
+        print ('bloc called successfully');
       } catch (e) {
         emit(CreateBannerError(message: e.toString()));
       }

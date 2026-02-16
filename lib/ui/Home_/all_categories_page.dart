@@ -107,28 +107,54 @@ class _AllCategoriesPageState extends State<AllCategoriesPage> {
                   },
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 40.r,
-                        backgroundColor: const Color(0xFFFCF8E8),
-                        child: ClipOval(
-                          child: isNetworkImage
-                              ? CachedNetworkImage(
-                                  imageUrl: category.image,
-                                  fit: BoxFit.cover,
-                                  width: 80.r,
-                                  height: 80.r,
-                                  errorWidget: (context, url, error) =>
-                                      Image.asset('assets/placeholder.png',
-                                          fit: BoxFit.cover),
-                                )
-                              : Image.asset(
-                                  'assets/placeholder.png',
-                                  fit: BoxFit.cover,
-                                  width: 80.r,
-                                  height: 80.r,
-                                ),
-                        ),
-                      ),
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   Container(
+  width: 80.r,
+  height: 80.r,
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    color: const Color(0xFFFCF8E8), // background color
+    border: Border.all(
+      color: appColor.loadingColor, // border color (change if needed)
+      width: 0.8.w,
+    ),
+  ),
+  child: ClipOval(
+    child: isNetworkImage
+        ? CachedNetworkImage(
+            imageUrl: category.image,
+            fit: BoxFit.cover,
+            errorWidget: (context, url, error) =>
+                Image.asset(
+                  'assets/placeholder.png',
+                  fit: BoxFit.cover,
+                ),
+          )
+        : Image.asset(
+            'assets/placeholder.png',
+            fit: BoxFit.cover,
+          ),
+  ),
+),
+
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
+                   
                       SizedBox(height: 11.h),
                       Text(
                         category.name,

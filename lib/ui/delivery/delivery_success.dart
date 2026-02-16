@@ -35,7 +35,7 @@ void initState() {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) => const NavigationBarWidget(),
+          builder: (_) => const NavigationBarWidget(initialIndex: 0,),
         ),
         (route) => false,
       );

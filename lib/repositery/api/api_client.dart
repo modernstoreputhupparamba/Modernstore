@@ -3,9 +3,11 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:modern_grocery/main.dart';
 import 'package:modern_grocery/repositery/api/api_exception.dart';
+import 'package:modern_grocery/ui/auth_/enter_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
@@ -26,11 +28,13 @@ class ApiClient {
     if (kDebugMode) print(' Token: ${token ?? "No token"}');
 
     // Handle Multipart (File Upload) Request for POST or PUT
-    if (method.toUpperCase() == 'POST_MULTIPART' || (method.toUpperCase() == 'PUT' && files != null)) {
+    if (method.toUpperCase() == 'POST_MULTIPART' ||
+        (method.toUpperCase() == 'PUT' && files != null)) {
       try {
         final request = http.MultipartRequest(
             (method.toUpperCase() == 'PUT') ? 'PUT' : 'POST', Uri.parse(url));
         request.headers.addAll(headers);
+        request.headers.remove('Content-Type');
 
         // Add body fields
         if (body is Map<String, String>) {
@@ -46,7 +50,13 @@ class ApiClient {
         }
 
         final streamedResponse = await request.send();
-        return await http.Response.fromStream(streamedResponse);
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (kDebugMode) {
+          print('Status: ${response.statusCode}');
+          print('Response: ${response.body}');
+        }
+        return response;
       } catch (e) {
         throw ApiException('Network error during file upload: $e', 0);
       }
@@ -89,8 +99,20 @@ class ApiClient {
       print('Status: ${response.statusCode}');
       print('Response: ${response.body}');
     }
+    if (response.statusCode == 401) {
+      log('Unauthorized - redirecting to login');
 
-  
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => EnterScreen()),
+        (route) => false,
+      );
+
+      throw ApiException('Unauthorized', 401);
+    }
+
     if (response.statusCode >= 400) {
       log('$path : ${response.statusCode} : ${response.body}');
       throw ApiException(_decodeError(response), response.statusCode);

@@ -29,7 +29,7 @@ class Data {
     int? shippedOrders;
     int? deliveredOrders;
     int? canceledOrders;
-    int? totalRevenue;
+    num? totalRevenue;
     List<dynamic>? topCategories;
     int? currentMonthDeliveredOrders;
 

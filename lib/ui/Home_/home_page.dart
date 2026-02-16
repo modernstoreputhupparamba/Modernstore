@@ -11,6 +11,7 @@ import 'package:modern_grocery/bloc/Product_/offerproduct/offerproduct_bloc.dart
 import 'package:modern_grocery/localization/app_localizations.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/Home_/all_categories_page.dart';
+import 'package:modern_grocery/ui/bottom_navigationbar.dart';
 import 'package:modern_grocery/ui/products/Product_list.dart';
 import 'package:modern_grocery/ui/products/product_details.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
@@ -131,15 +132,26 @@ class _HomePageState extends State<HomePage> {
                                   // if (widget.onFavTap != null) {
                                   //   widget.onFavTap!();
                                   // }
-                                   Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(builder: (_) => const MyOrdersPage()),
-  );
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const MyOrdersPage()),
+                                  );
                                 },
-                                icon: Icon(
-                                  Icons.favorite_outline,
-                                  color: appColor.iconColor,
-                                  size: 22.sp,
+                                icon: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.shopping_bag_outlined,
+                                      color: appColor.iconColor,
+                                      size: 24.sp,
+                                    ),
+                                    SizedBox(height: 3.h),
+                                    Text('orders',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            color: appColor.heading2,
+                                            fontSize: 12.sp))
+                                  ],
                                 ),
                               )
                             ],
@@ -147,37 +159,58 @@ class _HomePageState extends State<HomePage> {
 
                           SizedBox(height: 18.h),
                           // Search Bar
-                          SizedBox(
-                            height: 48.h,
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText: AppLocalizations.getString(
-                                    'search_something', lang),
-                                hintStyle: fontStyles.primaryTextStyle,
-                                prefixIcon: Icon(Icons.search,
-                                    color: Color(0x91FCF8E8)),
-                                filled: true,
-                                fillColor: Color(0xFF0A0909),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  borderSide: BorderSide(
-                                      color: appColor.secondaryText,
-                                      width: 2.w),
+                          GestureDetector(
+                            onTap: () {
+                                 Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          NavigationBarWidget(initialIndex: 1)),
+                                 
+                                );
+                            },
+
+                            child: SizedBox(
+                              height: 48.h,
+                              child: TextField(
+                                onTap: () {
+                                      Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          NavigationBarWidget(initialIndex: 1)),
+                                 
+                                );
+                                },
+                                decoration: InputDecoration(
+                                  hintText: AppLocalizations.getString(
+                                      'search_something', lang),
+                                  hintStyle: fontStyles.primaryTextStyle,
+                                  prefixIcon: Icon(Icons.search,
+                                      color: Color(0x91FCF8E8)),
+                                  filled: true,
+                                  fillColor: Color(0xFF0A0909),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                    borderSide: BorderSide(
+                                        color: appColor.secondaryText,
+                                        width: 2.w),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                    borderSide: BorderSide(
+                                        color: appColor.secondaryText,
+                                        width: 2.w),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                    borderSide: BorderSide(
+                                        color: appColor.secondaryText,
+                                        width: 2.w),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      vertical: 15.h, horizontal: 13.w),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  borderSide: BorderSide(
-                                      color: appColor.secondaryText,
-                                      width: 2.w),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10.r),
-                                  borderSide: BorderSide(
-                                      color: appColor.secondaryText,
-                                      width: 2.w),
-                                ),
-                                contentPadding: EdgeInsets.symmetric(
-                                    vertical: 15.h, horizontal: 13.w),
                               ),
                             ),
                           ),
@@ -355,10 +388,10 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 32.h),
+                    SizedBox(height: 16.h),
                     // Categories Section
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -381,7 +414,7 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 36.h),
+                    SizedBox(height: 8.h),
                     BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
                       builder: (context, state) {
                         if (state is GetAllCategoriesLoading) {
@@ -396,7 +429,7 @@ class _HomePageState extends State<HomePage> {
                                 itemBuilder: (context, index) {
                                   return Padding(
                                     padding: EdgeInsets.only(
-                                        left: index == 0 ? 20.w : 10.w,
+                                        left: index == 0 ? 24.w : 24.w,
                                         right: 10.w),
                                     child: Column(
                                       children: [
@@ -453,49 +486,48 @@ class _HomePageState extends State<HomePage> {
                                   },
                                   child: Padding(
                                     padding: EdgeInsets.only(
-                                        left: index == 0 ? 20.w : 10.w,
+                                        left: index == 0 ? 24.w : 10.w,
                                         right: 10.w),
                                     child: Column(
                                       children: [
-                                        CircleAvatar(
-                                          radius: 40.r,
-                                          backgroundColor:
-                                              const Color(0xFFFCF8E8),
+                                        Container(
+                                          width: 80.r,
+                                          height: 80.r,
+                                          decoration: BoxDecoration(
+                                            color: Color(0xFFFCF8E8),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: const Color(0xFFFCF8E8),
+                                              width: 0.8.w,
+                                            ),
+                                          ),
+                                          // Wrap the child in ClipOval to ensure the image follows the circle shape
                                           child: ClipOval(
                                             child: isNetworkImage
                                                 ? CachedNetworkImage(
                                                     imageUrl: imageUrl,
-                                                    width: 80.r, // diameter
-                                                    height: 80.r,
                                                     fit: BoxFit.cover,
-                                                    errorWidget: (context, url,
-                                                            error) =>
-                                                        Image.asset(
-                                                            'assets/placeholder.png',
-                                                            fit: BoxFit.cover),
+                                                    errorWidget:
+                                                        (context, url, error) =>
+                                                            Image.asset(
+                                                      'assets/placeholder.png',
+                                                      fit: BoxFit.cover,
+                                                    ),
                                                   )
                                                 : Image.asset(
                                                     imageUrl.isEmpty
                                                         ? 'assets/placeholder.png'
                                                         : imageUrl,
-                                                    width: 80.r,
-                                                    height: 80.r,
                                                     fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                            error,
-                                                            stackTrace) =>
-                                                        Image.asset(
-                                                            'assets/placeholder.png',
-                                                            fit: BoxFit.cover),
                                                   ),
                                           ),
                                         ),
-                                        SizedBox(height: 11.h),
+                                        SizedBox(height: 12.h),
                                         Text(
                                           categoryName,
                                           style: fontStyles.primaryTextStyle
                                               .copyWith(
-                                            fontSize: 10.sp,
+                                            fontSize: 12.sp,
                                             fontWeight: FontWeight.w600,
                                             color: appColor.textColor2,
                                           ),
@@ -512,9 +544,10 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                     // Best Deals Section
+                    SizedBox(height: 16.h),
 
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -538,69 +571,68 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 26.h),
+                    SizedBox(height: 0.h),
 
                     BlocBuilder<OfferproductBloc, OfferproductState>(
                       builder: (context, state) {
                         if (state is OfferproductLoading) {
                           return _buildshimmer();
                         }
+//////////////////////////////////////////
 
                         if (state is OfferproductLoaded) {
                           final bestDeals =
                               BlocProvider.of<OfferproductBloc>(context)
                                   .offerproductModel;
-                          print('bloc loaded successfully');
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                height: 200.h,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: bestDeals.data?.length,
-                                  itemBuilder: (context, index) {
-                                    final product = bestDeals.data![index];
 
-                                    return Padding(
-                                      padding: EdgeInsets.only(
-                                          left: index == 0 ? 20.w : 10.w,
-                                          right: 10.w),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  ProductDetails(
-                                                productId:
-                                                    product.id.toString(),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: ProductCard(
-                                          product: {
-                                            'name': (product.name ??
-                                                    AppLocalizations.getString(
-                                                        'unknown', lang))
-                                                .toString(),
-                                            'price': (product.basePrice ?? 0)
-                                                .toString(),
-                                            'rating': product.v ?? 0,
-                                            'image': (product
-                                                        .images?.isNotEmpty ??
-                                                    false)
-                                                ? product.images![0].toString()
-                                                : 'assets/placeholder.png',
-                                          },
-                                        ),
+                          print('bloc loaded successfully');
+
+                          return GridView.builder(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 24.w, vertical: 8.h),
+                            shrinkWrap: true,
+                            physics:
+                                const NeverScrollableScrollPhysics(), // if inside another scroll
+                            itemCount: bestDeals.data?.length ?? 0,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2, // number of columns
+                              crossAxisSpacing: 12.w,
+                              mainAxisSpacing: 12.h,
+                              childAspectRatio: 0.68, // adjust for card height
+                            ),
+                            itemBuilder: (context, index) {
+                              final product = bestDeals.data![index];
+
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ProductDetails(
+                                        productId: product.id.toString(),
                                       ),
-                                    );
+                                    ),
+                                  );
+                                },
+                                child: ProductCard(
+                                  product: {
+                                    'name': (product.name ??
+                                            AppLocalizations.getString(
+                                                'unknown', lang))
+                                        .toString(),
+                                    'basePrice': product.basePrice,
+                                    'discountPercentage':
+                                        product.discountPercentage,
+                                    'rating': product.v ?? 0,
+                                    'image':
+                                        (product.images?.isNotEmpty ?? false)
+                                            ? product.images![0].toString()
+                                            : 'assets/placeholder.png',
                                   },
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           );
                         } else if (state is OfferproductError) {
                           return Center(
@@ -614,208 +646,208 @@ class _HomePageState extends State<HomePage> {
                         }
                       },
                     ),
-                    // Beverages Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppLocalizations.getString('beverages', lang),
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFFCF8E8),
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const Product_list(
-                                        CategoryId: '67fb1aa6b49a18abdf26144e',
-                                        nav_type: 'home')),
-                              );
-                            },
-                            child: Text(
-                              AppLocalizations.getString('see_all', lang),
-                              style:
-                                  GoogleFonts.poppins(color: Color(0xFFDDD2A3)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 26.h),
+                    //     //     Beverages Section
+                    // Padding(
+                    // padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    // child: Row(
+                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // children: [
+                    // Text(
+                    // AppLocalizations.getString('beverages', lang),
+                    // style: GoogleFonts.poppins(
+                    // color: const Color(0xFFFCF8E8),
+                    // fontSize: 18.sp,
+                    // fontWeight: FontWeight.w600,
+                    // ),
+                    // ),
+                    // TextButton(
+                    // onPressed: () {
+                    // Navigator.push(
+                    // context,
+                    // MaterialPageRoute(
+                    // builder: (context) => const Product_list(
+                    // CategoryId: '67fb1aa6b49a18abdf26144e',
+                    // nav_type: 'home')),
+                    // );
+                    // },
+                    // child: Text(
+                    // AppLocalizations.getString('see_all', lang),
+                    // style:
+                    // GoogleFonts.poppins(color: Color(0xFFDDD2A3)),
+                    // ),
+                    // ),
+                    // ],
+                    // ),
+                    // ),
+                    // SizedBox(height: 26.h),
 
-                    BlocBuilder<GetCategoryProductsBloc,
-                        GetCategoryProductsState>(
-                      builder: (context, state) {
-                        if (state is GetCategoryProductsLoading) {
-                          return _buildshimmer();
-                        } else if (state is GetCategoryProductsLoaded) {
-                          final beverages = context
-                              .read<GetCategoryProductsBloc>()
-                              .getCategoryProductsModel;
+                    // BlocBuilder<GetCategoryProductsBloc,
+                    // GetCategoryProductsState>(
+                    // builder: (context, state) {
+                    // if (state is GetCategoryProductsLoading) {
+                    // return _buildshimmer();
+                    // } else if (state is GetCategoryProductsLoaded) {
+                    // final beverages = context
+                    // .read<GetCategoryProductsBloc>()
+                    // .getCategoryProductsModel;
 
-                          // Check if data exists and is not empty
-                          if (beverages.data == null ||
-                              beverages.data!.isEmpty) {
-                            return Text(
-                                AppLocalizations.getString(
-                                    'no_beverages', lang),
-                                style:
-                                    GoogleFonts.poppins(color: Colors.white));
-                          }
+                    //   //    Check if data exists and is not empty
+                    // if (beverages.data == null ||
+                    // beverages.data!.isEmpty) {
+                    // return Text(
+                    // AppLocalizations.getString(
+                    // 'no_beverages', lang),
+                    // style:
+                    // GoogleFonts.poppins(color: Colors.white));
+                    // }
 
-                          return SizedBox(
-                            height: 200.h,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: beverages.data?.length ?? 0,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    left: index == 0 ? 20.w : 10.w,
-                                    right: 10.w,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ProductDetails(
-                                            productId:
-                                                beverages.data![index].id ?? '',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: ProductCard(
-                                        product:
-                                            beverages.data![index].toJson()),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        } else if (state is GetCategoryProductsError) {
-                          return Center(
-                              child: Text(
-                                  AppLocalizations.getString(
-                                      'failed_load_beverages', lang),
-                                  style: GoogleFonts.poppins(
-                                      color: Colors.white)));
-                        } else {
-                          return const SizedBox.shrink();
-                        }
-                      },
-                    ),
+                    // return SizedBox(
+                    // height: 200.h,
+                    // child: ListView.builder(
+                    // scrollDirection: Axis.horizontal,
+                    // itemCount: beverages.data?.length ?? 0,
+                    // itemBuilder: (context, index) {
+                    // return Padding(
+                    // padding: EdgeInsets.only(
+                    // left: index == 0 ? 20.w : 10.w,
+                    // right: 10.w,
+                    // ),
+                    // child: GestureDetector(
+                    // onTap: () {
+                    // Navigator.push(
+                    // context,
+                    // MaterialPageRoute(
+                    // builder: (context) => ProductDetails(
+                    // productId:
+                    // beverages.data![index].id ?? '',
+                    // ),
+                    // ),
+                    // );
+                    // },
+                    // child: ProductCard(
+                    // product:
+                    // beverages.data![index].toJson()),
+                    // ),
+                    // );
+                    // },
+                    // ),
+                    // );
+                    // } else if (state is GetCategoryProductsError) {
+                    // return Center(
+                    // child: Text(
+                    // AppLocalizations.getString(
+                    // 'failed_load_beverages', lang),
+                    // style: GoogleFonts.poppins(
+                    // color: Colors.white)));
+                    // } else {
+                    // return const SizedBox.shrink();
+                    // }
+                    // },
+                    // ),
 
-                    // Vegetables Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppLocalizations.getString('vegetables', lang),
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFFCF8E8),
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => const Product_list(
-                                        CategoryId:
-                                            '67ec290adaa2fb3cd2af3a2a', // Use a special identifier for offers
-                                        nav_type: 'home')),
-                              );
-                            },
-                            child: Text(
-                              AppLocalizations.getString('see_all', lang),
-                              style:
-                                  GoogleFonts.poppins(color: Color(0xFFDDD2A3)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 26.h),
-                    BlocBuilder<GetCategoryProductsBloc,
-                        GetCategoryProductsState>(
-                      builder: (context, state) {
-                        if (state is GetCategoryProductsLoading) {
-                          return _buildshimmer();
-                        } else if (state is GetCategoryProductsLoaded) {
-                          final vegetables = context
-                              .read<GetCategoryProductsBloc>()
-                              .getCategoryProductsModel;
+                    //       //      Vegetables Section
+                    // Padding(
+                    // padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    // child: Row(
+                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    // children: [
+                    // Text(
+                    // AppLocalizations.getString('vegetables', lang),
+                    // style: GoogleFonts.poppins(
+                    // color: const Color(0xFFFCF8E8),
+                    // fontSize: 18.sp,
+                    // fontWeight: FontWeight.w600,
+                    // ),
+                    // ),
+                    // TextButton(
+                    // onPressed: () {
+                    // Navigator.push(
+                    // context,
+                    // MaterialPageRoute(
+                    // builder: (context) => const Product_list(
+                    // CategoryId:
+                    // '67ec290adaa2fb3cd2af3a2a', // Use a special identifier for offers
+                    // nav_type: 'home')),
+                    // );
+                    // },
+                    // child: Text(
+                    // AppLocalizations.getString('see_all', lang),
+                    // style:
+                    // GoogleFonts.poppins(color: Color(0xFFDDD2A3)),
+                    // ),
+                    // ),
+                    // ],
+                    // ),
+                    // ),
+                    // SizedBox(height: 26.h),
+                    // BlocBuilder<GetCategoryProductsBloc,
+                    // GetCategoryProductsState>(
+                    // builder: (context, state) {
+                    // if (state is GetCategoryProductsLoading) {
+                    // return _buildshimmer();
+                    // } else if (state is GetCategoryProductsLoaded) {
+                    // final vegetables = context
+                    // .read<GetCategoryProductsBloc>()
+                    // .getCategoryProductsModel;
 
-                          // Check if data exists and is not empty
-                          if (vegetables.data!.isEmpty) {
-                            return Center(
-                              child: Text(
-                                AppLocalizations.getString(
-                                    'no_vegetables', lang),
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                ),
-                              ),
-                            );
-                          }
+                    //     //       Check if data exists and is not empty
+                    // if (vegetables.data!.isEmpty) {
+                    // return Center(
+                    // child: Text(
+                    // AppLocalizations.getString(
+                    // 'no_vegetables', lang),
+                    // style: GoogleFonts.poppins(
+                    // color: Colors.white,
+                    // ),
+                    // ),
+                    // );
+                    // }
 
-                          return SizedBox(
-                            height: 200.h,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: vegetables.data?.length ?? 0,
-                              itemBuilder: (context, index) {
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                    left: index == 0 ? 20.w : 10.w,
-                                    right: 10.w,
-                                  ),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ProductDetails(
-                                            productId:
-                                                vegetables.data![index].id ??
-                                                    '',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: ProductCard(
-                                      product: vegetables.data![index].toJson(),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        } else if (state is GetCategoryProductsError) {
-                          return Center(
-                            child: Text(
-                              AppLocalizations.getString(
-                                  'failed_load_vegetables', lang),
-                              style: GoogleFonts.poppins(color: Colors.white),
-                            ),
-                          );
-                        } else {
-                          return const SizedBox.shrink();
-                        }
-                      },
-                    ),
+                    // return SizedBox(
+                    // height: 200.h,
+                    // child: ListView.builder(
+                    // scrollDirection: Axis.horizontal,
+                    // itemCount: vegetables.data?.length ?? 0,
+                    // itemBuilder: (context, index) {
+                    // return Padding(
+                    // padding: EdgeInsets.only(
+                    // left: index == 0 ? 20.w : 10.w,
+                    // right: 10.w,
+                    // ),
+                    // child: GestureDetector(
+                    // onTap: () {
+                    // Navigator.push(
+                    // context,
+                    // MaterialPageRoute(
+                    // builder: (context) => ProductDetails(
+                    // productId:
+                    // vegetables.data![index].id ??
+                    // '',
+                    // ),
+                    // ),
+                    // );
+                    // },
+                    // child: ProductCard(
+                    // product: vegetables.data![index].toJson(),
+                    // ),
+                    // ),
+                    // );
+                    // },
+                    // ),
+                    // );
+                    // } else if (state is GetCategoryProductsError) {
+                    // return Center(
+                    // child: Text(
+                    // AppLocalizations.getString(
+                    // 'failed_load_vegetables', lang),
+                    // style: GoogleFonts.poppins(color: Colors.white),
+                    // ),
+                    // );
+                    //  else {
+                    // return const SizedBox.shrink();
+                    // }
+                    // },
+                    // ),
                   ],
                 ),
               ),
@@ -901,6 +933,19 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String imageUrl = product['image'] ?? 'assets/placeholder.png';
 
+    final double basePrice = (product['basePrice'] is num)
+        ? (product['basePrice'] as num).toDouble()
+        : double.tryParse(product['basePrice']?.toString() ?? '0') ?? 0.0;
+
+    final double discountPercentage = (product['discountPercentage'] is num)
+        ? (product['discountPercentage'] as num).toDouble()
+        : double.tryParse(product['discountPercentage']?.toString() ?? '0') ??
+            0.0;
+
+    final double discountedPrice = discountPercentage > 0
+        ? basePrice * (1 - discountPercentage / 100)
+        : basePrice;
+
     return Container(
       width: 140.w,
       padding: const EdgeInsets.all(10),
@@ -922,6 +967,8 @@ class ProductCard extends StatelessWidget {
             child: Stack(
               children: [
                 Container(
+                  width: double.infinity,
+                  height:  190.h,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFCF8E8),
                     borderRadius: BorderRadius.circular(10),
@@ -965,23 +1012,56 @@ class ProductCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: 5.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (starIndex) {
-              return Icon(
-                starIndex < (product['rating'] ?? 0)
-                    ? Icons.star
-                    : Icons.star_border,
-                color: Colors.amberAccent,
-                size: 14.sp,
-              );
-            }),
-          ),
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.center,
+          //   children: List.generate(5, (starIndex) {
+          //     return Icon(
+          //       starIndex < (product['rating'] ?? 0)
+          //           ? Icons.star
+          //           : Icons.star_border,
+          //       color: Colors.amberAccent,
+          //       size: 14.sp,
+          //     );
+          //   }),
+          // ),
           SizedBox(height: 5.h),
-          Text(
-            product['price'] ?? '₹0',
-            style: GoogleFonts.poppins(
-                color: const Color(0xFFFFFFFF), fontSize: 13.sp),
+          Column(
+            children: [
+              if (discountPercentage > 0)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          "₹ ${discountedPrice.toStringAsFixed(0)}",
+                          style: TextStyle(
+                              color: const Color(0xFFFFFFFF),
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(width: 5.w),
+                        Text(
+                          "MRP ₹${basePrice.toStringAsFixed(0)}",
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12.sp,
+                              decoration: TextDecoration.lineThrough,
+                              decorationColor: Colors.grey),
+                        ),
+                      ],
+                    ),
+                    SizedBox(width: 5.w),
+                    Text(
+                      "${discountPercentage.toInt()}% OFF",
+                      style: TextStyle(
+                          color: const Color.fromARGB(255, 98, 199, 101),
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+            ],
           ),
         ],
       ),

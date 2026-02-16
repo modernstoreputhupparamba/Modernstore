@@ -40,8 +40,10 @@ class _AdminProductState extends State<AdminProduct> {
   File? _image;
   String? _imageFileType;
   bool _isUploading = false;
-  String? _networkImageUrl;
+List<String>? networkImageUrls; // Changed from single String to List
   String? selectedCategoryId;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -55,15 +57,16 @@ class _AdminProductState extends State<AdminProduct> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
-  final TextEditingController unitController = TextEditingController();
+  String? _selectedUnit;
+  final List<String> _unitOptions = ["KG", "G", "MG", "LTR", "PCS", "BOX", "PACKET"];
   final TextEditingController discountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
   @override
   void dispose() {
+    _searchController.dispose();
     nameController.dispose();
     priceController.dispose();
-    unitController.dispose();
     discountController.dispose();
     descriptionController.dispose();
     super.dispose();
@@ -147,11 +150,11 @@ class _AdminProductState extends State<AdminProduct> {
               // ✅ Clear form + image
               setState(() {
                 _image = null;
-                _networkImageUrl = null;
+                networkImageUrls = null;
                 selectedCategoryId = null;
                 nameController.clear();
                 priceController.clear();
-                unitController.clear();
+                _selectedUnit = null;
                 discountController.clear();
                 descriptionController.clear();
               });
@@ -209,13 +212,16 @@ class _AdminProductState extends State<AdminProduct> {
     // Prefill data for editing
     nameController.text = productData.name ?? '';
     priceController.text = productData.basePrice?.toString() ?? '';
-    unitController.text = productData.unit ?? '';
+    _selectedUnit = null;
+    if (productData.unit != null) {
+      if (_unitOptions.contains(productData.unit!.toUpperCase())) {
+        _selectedUnit = productData.unit!.toUpperCase();
+      }
+    }
     discountController.text = productData.discountPercentage?.toString() ?? '';
     descriptionController.text = productData.description ?? '';
     selectedCategoryId = productData.category?.id;
-    _networkImageUrl = (productData.images?.isNotEmpty ?? false)
-        ? productData.images![0]
-        : null;
+    networkImageUrls = productData.images; // Assign the full list
     _image = null; // Clear local image when starting an edit
 
     showDialog(
@@ -238,11 +244,11 @@ class _AdminProductState extends State<AdminProduct> {
                 // Clear form + image
                 setState(() {
                   _image = null;
-                  _networkImageUrl = null;
+                  networkImageUrls = null;
                   selectedCategoryId = null;
                   nameController.clear();
                   priceController.clear();
-                  unitController.clear();
+                  _selectedUnit = null;
                   discountController.clear();
                   descriptionController.clear();
                 });
@@ -292,151 +298,136 @@ class _AdminProductState extends State<AdminProduct> {
     );
   }
 
-  Widget _buildAddProductForm() {
-    return SingleChildScrollView(
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Name Field
-            _buildTextField(
-                nameController, 'Product Name', 'Enter product name'),
-            SizedBox(height: 12.h),
-            // Category Dropdown
-            BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
-              builder: (context, state) {
-                if (state is GetAllCategoriesLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (state is GetAllCategoriesLoaded) {
-                  return DropdownButtonFormField<String>(
-                    value: selectedCategoryId,
-                    items: state.categories.map((category) {
+   Widget _buildAddProductForm() {
+    return SizedBox(
+      width: double.maxFinite,
+      child: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTextField(nameController, 'Product Name', 'Required'),
+                  SizedBox(height: 12.h),
+                  
+                  // Safe Category Dropdown
+                  BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
+                    builder: (context, state) {
+                      if (state is GetAllCategoriesLoaded) {
+                        // CRITICAL FIX: Ensure the selected ID exists in the items list
+                        final bool valueExists = state.categories.any((c) => c.id == selectedCategoryId);
+                        
+                        return DropdownButtonFormField<String>(
+                          value: valueExists ? selectedCategoryId : null,
+                          items: state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name ?? ''))).toList(),
+                          onChanged: (val) => setState(() => selectedCategoryId = val),
+                          decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                          validator: (v) => v == null ? 'Required' : null,
+                        );
+                      }
+                      return const LinearProgressIndicator();
+                    },
+                  ),
+                  
+                  SizedBox(height: 12.h),
+                  Row(
+                    children: [
+                      Expanded(child: _buildTextField(priceController, 'Price', 'Req', keyboardType: TextInputType.number)),
+                      SizedBox(width: 8.w),
+                      Expanded(child: _buildTextField(discountController, 'Disc%', 'Req', keyboardType: TextInputType.number)),
+                    ],
+                  ),
+                  SizedBox(height: 12.h),
+                  DropdownButtonFormField<String>(
+                    value: _selectedUnit,
+                    items: _unitOptions.map((String value) {
                       return DropdownMenuItem<String>(
-                        value: category
-                            .id, // Ensure your category model has an 'id'
-                        child: Text(category.name),
+                        value: value,
+                        child: Text(value),
                       );
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedCategoryId = value;
-                      });
+                    onChanged: (newValue) {
+                      setState(() => _selectedUnit = newValue);
                     },
+                    style: const TextStyle(color: Color(0xFF0A0909), fontSize: 16),
                     decoration: InputDecoration(
-                      labelText: 'Select Category',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      labelText: 'Unit',
+                      labelStyle: TextStyle(color: Colors.grey[700]),
                       border: const OutlineInputBorder(),
                       filled: true,
                       fillColor: Colors.white,
                     ),
-                    validator: (value) =>
-                        value == null ? 'Select a category' : null,
-                  );
-                }
-                if (state is GetAllCategoriesError) {
-                  return const Text(
-                    'Failed to load categories',
-                    style: TextStyle(color: Colors.red),
-                  );
-                }
-                return DropdownButtonFormField<String>(
-                  items: const [],
-                  onChanged: null,
-                  hint: const Text('Loading categories...'),
-                );
-              },
-            ),
-            SizedBox(height: 12.h),
-            // Price Field
-            _buildTextField(priceController, 'Price', 'Enter price',
-                keyboardType: TextInputType.number),
-            SizedBox(height: 12.h),
-            // Unit Field
-            _buildTextField(
-                unitController, 'Unit (e.g., kg, piece)', 'Enter unit'),
-            SizedBox(height: 12.h),
-            // Discount Field
-            _buildTextField(discountController, 'Discount %', 'Enter discount',
-                keyboardType: TextInputType.number),
-            SizedBox(height: 12.h),
-            // Description Field
-            _buildTextField(
-                descriptionController, 'Description', 'Enter description',
-                maxLines: 3),
-            SizedBox(height: 12.h),
-            // Image Picker Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFF1C5),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(_AppConstants.dialogRadius),
-                ),
-                padding: EdgeInsets.symmetric(vertical: 12.h),
-                minimumSize: Size(double.infinity, 48.h),
-              ), // Use constant
-              onPressed: _pickImage,
-              child: Text(
-                _image == null ? 'Pick Image' : 'Change Image',
-                semanticsLabel:
-                    _image == null ? 'Pick image button' : 'Change image',
+                    validator: (value) => value == null ? 'Required' : null,
+                  ),
+                  SizedBox(height: 12.h),
+                  _buildTextField(descriptionController, 'Description', 'Required', maxLines: 3),
+                  SizedBox(height: 16.h),
+
+                  // Image Picker Button
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.add_a_photo),
+                    label: Text(_image == null ? "Pick Image" : "Change New Image"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _AppConstants.buttonColor,
+                      minimumSize: Size(double.infinity, 40.h),
+                    ),
+                  ),
+
+                  // --- IMAGE LIST SECTION ---
+                  if (_image != null || (networkImageUrls != null && networkImageUrls!.isNotEmpty)) ...[
+                    SizedBox(height: 12.h),
+                    SizedBox(
+                      height: 100.h,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: (networkImageUrls?.length ?? 0) + (_image != null ? 1 : 0),
+                        separatorBuilder: (context, index) => SizedBox(width: 8.w),
+                        itemBuilder: (context, index) {
+                          if (_image != null && index == 0) {
+                            return _buildImageItem(Image.file(_image!, fit: BoxFit.cover), "New");
+                          }
+                          final netIndex = _image != null ? index - 1 : index;
+                          return _buildImageItem(
+                            Image.network(networkImageUrls![netIndex], fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.error)),
+                            "Existing"
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (_image != null) ...[
-              SizedBox(height: 12.h),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.r),
-                child: Image.file(
-                  _image!,
-                  height: 100.h,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Text(
-                  'Selected: ${_image!.path.split('/').last}',
-                  style: const TextStyle(
-                    color: Color(0xFF0A0909),
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ] else if (_networkImageUrl != null) ...[
-              SizedBox(height: 12.h),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.r),
-                child: Image.network(
-                  _networkImageUrl!,
-                  height: 100.h,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: Text(
-                  'Current Image',
-                  style: const TextStyle(
-                    color: Color(0xFF0A0909),
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
-
+Widget _buildImageItem(Widget imageWidget, String label) {
+  return Column(
+    children: [
+      Expanded(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8.r),
+          child: Container(
+            width: 100.w,
+            color: Colors.grey[200],
+            child: imageWidget,
+          ),
+        ),
+      ),
+      SizedBox(height: 4.h),
+      Text(
+        label,
+        style: TextStyle(fontSize: 10.sp, color: Colors.grey[700]),
+      ),
+    ],
+  );
+}
   Widget _buildTextField(
       TextEditingController controller, String label, String validationMsg,
       {int maxLines = 1,
@@ -471,7 +462,7 @@ class _AdminProductState extends State<AdminProduct> {
             nameController.clear();
             descriptionController.clear();
             priceController.clear();
-            unitController.clear();
+            _selectedUnit = null;
             discountController.clear();
             _isUploading = false;
           });
@@ -516,7 +507,7 @@ class _AdminProductState extends State<AdminProduct> {
                           productDescription: descriptionController.text.trim(),
                           categoryId: selectedCategoryId!,
                           price: priceController.text.trim(),
-                          unit: unitController.text.trim(),
+                          unit: _selectedUnit!,
                           imageFile: _image!,
                           discountPercentage: (double.tryParse(
                                       discountController.text.trim()) ??
@@ -532,7 +523,7 @@ class _AdminProductState extends State<AdminProduct> {
                         productName: nameController.text.trim(),
                         productDescription: descriptionController.text.trim(),
                         price: priceController.text.trim(),
-                        unit: unitController.text.trim(),
+                        unit: _selectedUnit!,
                         categoryId: selectedCategoryId!,
                         discountPercentage:
                             (double.tryParse(discountController.text.trim()) ??
@@ -558,9 +549,6 @@ class _AdminProductState extends State<AdminProduct> {
 
   @override
   Widget build(BuildContext context) {
-    ScreenUtil.init(context,
-        designSize: const Size(375, 812), minTextAdapt: true);
-
     return Scaffold(
       backgroundColor: _AppConstants.backgroundColor,
       body: SafeArea(
@@ -570,7 +558,7 @@ class _AdminProductState extends State<AdminProduct> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: 20.h),
-              _buildAppBar(),
+              // _buildAppBar(),
               SizedBox(height: 24.h),
               _buildSearchBar(),
               SizedBox(height: 24.h),
@@ -613,7 +601,7 @@ class _AdminProductState extends State<AdminProduct> {
                   ),
                 ),
               ),
-              SizedBox(height: 24.h),
+              SizedBox(height: 16.h),
               Expanded(child: _buildCategorizedProductList()),
             ],
           ),
@@ -655,118 +643,166 @@ class _AdminProductState extends State<AdminProduct> {
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: _AppConstants.textColor.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: _AppConstants.textColor.withOpacity(0.57)),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search products...',
-                hintStyle: TextStyle(
-                  color: _AppConstants.textColor.withOpacity(0.57),
-                  fontSize: 14.sp,
-                ),
-                border: InputBorder.none,
+    return Row(
+      children: [
+        // Icon(Icons.search, color: _AppConstants.textColor.withOpacity(0.57)),
+        SizedBox(width: 8.w),
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
+            },
+             style: TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "Search products...",
+              hintStyle: TextStyle(color: const Color(0x91FCF8E8)),
+              enabledBorder: OutlineInputBorder(
+                borderSide:
+                    BorderSide(color: const Color(0xFFFCF8E8), width: 2),
+                borderRadius: BorderRadius.circular(10),
               ),
-              style: TextStyle(
-                color: _AppConstants.textColor,
-                fontSize: 14.sp,
+              focusedBorder: OutlineInputBorder(
+                borderSide:
+                    BorderSide(color: const Color(0xFFFCF8E8), width: 2),
+                borderRadius: BorderRadius.circular(10),
               ),
+               prefixIcon: Icon(Icons.search, color: Colors.white54, size: 20.sp),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCategorizedProductList() {
-    return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
-      builder: (context, categoryState) {
-        if (categoryState is GetAllCategoriesLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (categoryState is GetAllCategoriesError) {
-          return const Center(
-              child: Text('Failed to load categories',
-                  style: TextStyle(color: Colors.white)));
-        }
-        if (categoryState is GetAllCategoriesLoaded) {
-          final categories = categoryState.categories;
-          return BlocBuilder<GetAllProductBloc, GetAllProductState>(
-            builder: (context, productState) {
-              if (productState is GetAllProductLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (productState is GetAllProductError) {
-                return const Center(
-                    child: Text('Failed to load products',
-                        style: TextStyle(color: Colors.white)));
-              }
-              if (productState is GetAllProductLoaded) {
-                final allProducts = productState.getAllProduct.data ?? [];
-                return ListView.builder(
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    final categoryProducts = allProducts
-                        .where((p) => p.category?.id == category.id)
-                        .toList();
+Widget _buildCategorizedProductList() {
+  return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
+    builder: (context, categoryState) {
+      if (categoryState is GetAllCategoriesLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-                    if (categoryProducts.isEmpty) {
-                      return const SizedBox
-                          .shrink(); // Don't show category if no products
-                    }
+      if (categoryState is GetAllCategoriesError) {
+        return const Center(
+          child: Text(
+            'Failed to load categories',
+            style: TextStyle(color: Colors.white),
+          ),
+        );
+      }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.h),
-                          child: _buildSectionTitle(
-                              category.name ?? 'Unnamed Category'),
+      if (categoryState is GetAllCategoriesLoaded) {
+        final categories = categoryState.categories;
+
+        return BlocBuilder<GetAllProductBloc, GetAllProductState>(
+          builder: (context, productState) {
+            if (productState is GetAllProductLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (productState is GetAllProductError) {
+              return const Center(
+                child: Text(
+                  'Failed to load products',
+                  style: TextStyle(color: Colors.white),
+                ),
+              );
+            }
+
+            if (productState is GetAllProductLoaded) {
+              final allProducts = productState.getAllProduct.data ?? [];
+
+              return ListView.builder(
+                padding: EdgeInsets.only(bottom: 16.h),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+
+                  final categoryProducts = allProducts.where((p) {
+                    if (p.category?.id != category.id) return false;
+
+                    if (_searchQuery.isEmpty) return true;
+
+                    final matchesName =
+                        (p.name?.toLowerCase() ?? '').contains(_searchQuery);
+                    final matchesCategory =
+                        (category.name?.toLowerCase() ?? '')
+                            .contains(_searchQuery);
+
+                    return matchesName || matchesCategory;
+                  }).toList();
+
+                  if (categoryProducts.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.h),
+                        child: _buildSectionTitle(
+                          category.name ?? 'Unnamed Category',
                         ),
-                        _buildProductList(categoryProducts),
-                      ],
-                    );
-                  },
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          );
-        }
-        return const SizedBox.shrink();
-      },
-    );
-  }
+                      ),
 
-  Widget _buildProductList(List<Data> products) {
-    return SizedBox(
-      height: _AppConstants.cardHeight.h,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return Padding(
-            padding: EdgeInsets.only(left: index == 0 ? 0 : 12.w, right: 12.w),
-            child: _ProductCard(
-                product: product,
-                onEdit: () => _showEditProductDialog(context, product)),
-          );
-        },
-      ),
+                      /// 👇 GridView for products
+                     GridView.builder(
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  itemCount: categoryProducts.length,
+  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+    crossAxisSpacing: 12.w,
+    mainAxisSpacing: 12.h,
+    childAspectRatio: 0.65,
+  ),
+  itemBuilder: (context, i) {
+    final product = categoryProducts[i];
+    return _ProductCard(
+      product: product,
+      onEdit: () => _showEditProductDialog(context, product),
     );
-  }
+  },
+),
+                    ],
+                  );
+                },
+              );
+            }
+
+            return const SizedBox.shrink();
+          },
+        );
+      }
+
+      return const SizedBox.shrink();
+    },
+  );
+}
+//   Widget _buildProductList(List<Data> products) {
+//     final isTablet = MediaQuery.of(context).size.width > 600;
+//     final height = isTablet ? 280.0 : _AppConstants.cardHeight.h;
+
+//     return SizedBox(
+//       height: height,
+//       child: ListView.builder(
+//         scrollDirection: Axis.horizontal,
+//         itemCount: products.length,
+//         itemBuilder: (context, index) {
+//           final product = products[index];
+//           return Padding(
+//             padding: EdgeInsets.only(left: index == 0 ? 0 : 12.w, right: 12.w),
+//             child: _ProductCard(
+//                 product: product,
+//                 onEdit: () => _showEditProductDialog(context, product)),
+//           );
+//         },
+//       ),
+//     );
+//   }
 }
 
 class _ProductCard extends StatelessWidget {
@@ -777,6 +813,11 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width > 600;
+    final cardWidth = isTablet ? 200.0 : _AppConstants.cardWidth.w;
+    final cardHeight = isTablet ? 280.0 : _AppConstants.cardHeight.h;
+    final imageHeight = isTablet ? 150.0 : 150.h;
+
     final imageUrl =
         (product.images?.isNotEmpty ?? false) ? product.images![0] : '';
     final discountPercentage = product.discountPercentage ?? 0;
@@ -784,8 +825,8 @@ class _ProductCard extends StatelessWidget {
     final discountedPrice = basePrice - (basePrice * discountPercentage / 100);
 
     return Container(
-      height: _AppConstants.cardHeight.h,
-      width: _AppConstants.cardWidth.w,
+      height: cardHeight,
+      width: cardWidth,
       decoration: BoxDecoration(
         color: Colors.grey[900],
         borderRadius: BorderRadius.circular(12.r),
@@ -805,7 +846,7 @@ class _ProductCard extends StatelessWidget {
             child: Stack(
               children: [
                 Container(
-                  height: 150.h,
+                  height: imageHeight,
                   width: double.infinity,
                   margin: EdgeInsets.symmetric(horizontal: 8.w),
                   decoration: BoxDecoration(
@@ -823,7 +864,7 @@ class _ProductCard extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  top: 100.h,
+                  bottom: 10.h,
                   left: 16.w,
                   child: Container(
                     padding:
@@ -875,17 +916,20 @@ class _ProductCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8.h),
-          Row(
-            children: List.generate(5, (index) {
-              // Placeholder for rating
-              return Icon(
-                index < 4 ? Icons.star : Icons.star_border,
-                color: const Color(0xFFFFD500),
-                size: 16.w,
-              );
-            }),
-          ),
-          SizedBox(height: 8.h),
+          // Padding(
+          //   padding: EdgeInsets.symmetric(horizontal: 12.w),
+          //   child: Row(
+          //     children: List.generate(5, (index) {
+          //       // Placeholder for rating
+          //       return Icon(
+          //         index < 4 ? Icons.star : Icons.star_border,
+          //         color: const Color(0xFFFFD500),
+          //         size: 16.w,
+          //       );
+          //     }),
+          //   ),
+          // ),
+          // SizedBox(height: 8.h),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 12.w),
             child: Row(

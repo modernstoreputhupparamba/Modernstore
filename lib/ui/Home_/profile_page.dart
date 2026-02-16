@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:modern_grocery/bloc/User/userprofile/userprofile_bloc.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/auth_/enter_screen.dart';
 import 'package:modern_grocery/ui/settings/Edit_profile.dart';
@@ -20,22 +22,29 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  Future<void> _logoutUser(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.remove('token');
-    await prefs.remove('role');
-    await prefs.remove('userType');
-    await prefs.remove('isAdmin');
-
-    if (context.mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => EnterScreen()),
-        (Route<dynamic> route) => false,
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+      BlocProvider.of<UserprofileBloc>(context).add(fetchUserprofile());
   }
+
+Future<void> _logoutUser(BuildContext context) async {
+  final prefs = await SharedPreferences.getInstance();
+
+  // Clear only auth-related data (or use clear() if you want everything gone)
+  await prefs.remove('token');
+  await prefs.remove('role');
+  await prefs.remove('userType');
+  await prefs.remove('isAdmin');
+  await prefs.clear();
+
+  if (!context.mounted) return;
+
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const EnterScreen()),
+    (_) => false,
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -43,61 +52,76 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (context, languageService, child) {
         return Scaffold(
           backgroundColor: const Color(0XFF0A0909),
+          appBar: AppBar(
+            backgroundColor: const Color(0XFF0A0909),
+            elevation: 0,
+            leading: BackButton(color: Color(0xffffffff)),
+            title: Text(
+              languageService.getString("my_account"),
+              textAlign: TextAlign.center, // Ensures centering within Expanded
+              style: GoogleFonts.poppins(
+                color: const Color(0xFFFCF8E8),
+                fontSize: 24.sp,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.24,
+              ),
+            ),
+            centerTitle: true,
+          ),
           body: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: 20.w),
             child: Column(
               children: [
-                SizedBox(height: 23.h),
+                SizedBox(height: 24.h),
 
-                Row(
-                  children: [
-                    SizedBox(width: 10.w),
-                    const BackButton(color: Color(0xffffffff)),
-                  ],
-                ),
-                SizedBox(height: 10.h), // Reduced spacing for better flow
-                // Title Row (centered)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        languageService.getString("my_account"),
-                        textAlign: TextAlign
-                            .center, // Ensures centering within Expanded
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFFFCF8E8),
-                          fontSize: 24.sp,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.24,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 25.h),
+              
                 // User Avatar and Name (centered)
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 40.r,
-                        backgroundImage:
-                            const AssetImage('assets/image 91.png'),
-                      ),
-                      SizedBox(height: 10.h),
-                      Text(
-                        languageService.getString("user_name"),
-                        textAlign: TextAlign.center, // Centers the name
-                        style: GoogleFonts.poppins(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFFCF8E8),
+                BlocBuilder<UserprofileBloc, UserprofileState>(
+                  builder: (context, state) {
+                    if (state is Userprofileloading) {
+                      return SizedBox(
+                        height: 150.h,
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFFFCF8E8),
+                          ),
                         ),
+                      );
+                    }
+
+                    String userName = languageService.getString("user_name");
+                    ImageProvider userImage =
+                        const AssetImage('assets/Icon/Customer profile.png');
+
+                    if (state is Userprofileloaded) {
+                      userName = state.user.user.name ?? userName;
+                      if (state.user.user.profileImage != null) {
+                        userImage = NetworkImage(state.user.user.profileImage!);
+                      }
+                    }
+
+                    return Center(
+                      child: Column(
+                        // mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 40.r,
+                            backgroundImage: userImage,
+                          ),
+                          SizedBox(height: 10.h),
+                          Text(
+                            userName,
+                            textAlign: TextAlign.center, // Centers the name
+                            style: GoogleFonts.poppins(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFFFCF8E8),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
                 SizedBox(height: 55.h),
                 // Sections
@@ -114,12 +138,12 @@ class _ProfilePageState extends State<ProfilePage> {
                   }),
                   buildListTile(Icons.location_on,
                       languageService.getString("my_address"), onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const MyAddressPage()),
-                        );
-                      }),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const MyAddressPage()),
+                    );
+                  }),
                   buildListTile(
                       Icons.language, languageService.getString("language"),
                       onTap: () {

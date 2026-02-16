@@ -8,7 +8,7 @@ final class AddDeliveryAddressInitial extends AddDeliveryAddressState {}
 final class AddDeliveryAddressLoading extends AddDeliveryAddressState {}
 
 final class AddDeliveryAddressLoaded extends AddDeliveryAddressState {
-  final Map<String, dynamic> ? DeliveryData;
+  final AddDeliveryAddress DeliveryData;
   AddDeliveryAddressLoaded({required this.DeliveryData});
 }
 

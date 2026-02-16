@@ -57,7 +57,7 @@ class _EnterScreenState extends State<EnterScreen> {
               });
 
               final token = state.login.accessToken;
-              final userType= state.login.user?.role;
+              final userType = state.login.user?.role;
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('token', token!);
               await prefs.setString('userType', userType!);
@@ -66,16 +66,16 @@ class _EnterScreenState extends State<EnterScreen> {
               final String numberToSave = phoneController.text.trim();
               await prefs.setString('number', numberToSave);
               print('Number saved: $numberToSave');
-              
+
               if (!mounted) return; // Check if widget is still mounted
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => VerifyScreen(
-                          phoneNumber:
-                              '${selectedCountryCode}${phoneController.text}',
-                          PhoneNo: phoneController.text.trim(),
-                        )),
+                  builder: (context) => VerifyScreen(
+                    phoneNo:
+                        '${phoneController.text.trim()}',
+                  ),
+                ),
               );
             } else if (state is loginBlocError) {
               // --- FIX: Stop loading ---
@@ -88,7 +88,8 @@ class _EnterScreenState extends State<EnterScreen> {
                   // --- REFACTORED SNACKBAR ---
                   content: Text(
                     languageService.getString(
-                        'login_error', ),
+                      'login_error',
+                    ),
                     style: fontStyles.errorstyle2, // White text
                   ),
                   backgroundColor: appColor.errorColor, // Use appColor
@@ -124,8 +125,8 @@ class _EnterScreenState extends State<EnterScreen> {
                                   title: Text(
                                     // --- REFACTORED STYLE ---
                                     languageService.getString(
-                                        'skip_warning_title',
-                                        ),
+                                      'skip_warning_title',
+                                    ),
                                     style: fontStyles.heading2.copyWith(
                                       color: appColor.textColor,
                                     ),
@@ -133,8 +134,8 @@ class _EnterScreenState extends State<EnterScreen> {
                                   content: Text(
                                     // --- REFACTORED STYLE ---
                                     languageService.getString(
-                                        'skip_warning_message',
-                                        ),
+                                      'skip_warning_message',
+                                    ),
                                     style: fontStyles.primaryTextStyle.copyWith(
                                       color: appColor.textColor2,
                                     ),
@@ -144,8 +145,9 @@ class _EnterScreenState extends State<EnterScreen> {
                                       onPressed: () => Navigator.pop(context),
                                       child: Text(
                                         // --- REFACTORED STYLE ---
-                                        languageService.getString('cancel',
-                                            ),
+                                        languageService.getString(
+                                          'cancel',
+                                        ),
                                         style: fontStyles.primaryTextStyle
                                             .copyWith(
                                           color: appColor.textColor,
@@ -165,8 +167,9 @@ class _EnterScreenState extends State<EnterScreen> {
                                       },
                                       child: Text(
                                         // --- REFACTORED STYLE ---
-                                        languageService.getString('continue',
-                                            ),
+                                        languageService.getString(
+                                          'continue',
+                                        ),
                                         style: fontStyles.heading2.copyWith(
                                           color: appColor.errorColor,
                                         ),
@@ -184,10 +187,7 @@ class _EnterScreenState extends State<EnterScreen> {
                               gradient: const LinearGradient(
                                 begin: Alignment(0.00, -1.00),
                                 end: Alignment(0, 1),
-                                colors: [
-                                  Color(0xFFF5E9B5),
-                                  Color(0xFF8F8769)
-                                ],
+                                colors: [Color(0xFFF5E9B5), Color(0xFF8F8769)],
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(24),
@@ -197,7 +197,8 @@ class _EnterScreenState extends State<EnterScreen> {
                               child: Text(
                                 // --- REFACTORED STYLE ---
                                 languageService.getString(
-                                    'skip', ),
+                                  'skip',
+                                ),
                                 style: fontStyles.caption.copyWith(
                                   color: appColor.textColor3,
                                   fontWeight: FontWeight.w500,
@@ -253,8 +254,9 @@ class _EnterScreenState extends State<EnterScreen> {
                             horizontal: 0.02 * screenWidth),
                         child: Text(
                           // --- REFACTORED STYLE ---
-                          languageService.getString('enter_your_number',
-                              ),
+                          languageService.getString(
+                            'enter_your_number',
+                          ),
                           style: fontStyles.heading2.copyWith(
                             color: appColor.textColor,
                             fontSize: 25.sp,
@@ -270,8 +272,9 @@ class _EnterScreenState extends State<EnterScreen> {
                             horizontal: 0.02 * screenWidth),
                         child: Text(
                           // --- REFACTORED STYLE ---
-                          languageService.getString('mobile_number',
-                              ),
+                          languageService.getString(
+                            'mobile_number',
+                          ),
                           style: fontStyles.primaryTextStyle.copyWith(
                             color: appColor.textColor2,
                             fontSize: 13.sp,
@@ -296,65 +299,72 @@ class _EnterScreenState extends State<EnterScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                            child: DropdownButton<String>(
-                              value: selectedCountryFlag,
-                              icon: Icon(Icons.arrow_drop_down,
-                                  color: appColor.iconColor), // Use appColor
-                              isExpanded: true,
-                              underline: Container(),
-                              dropdownColor: appColor.textColor3,
-                              items: [
-                                DropdownMenuItem(
-                                  value: '🇮🇳',
-                                  child: Center(
-                                    child: Text(
-                                      '🇮🇳 +91',
-                                      // --- REFACTORED STYLE ---
-                                      style:
-                                          fontStyles.primaryTextStyle.copyWith(
-                                        color: appColor.textColor,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 1.h),
+                              child: DropdownButton<String>(
+                                value: selectedCountryFlag,
+                                icon: Icon(Icons.arrow_drop_down,
+                                    color: appColor.iconColor), // Use appColor
+                                isExpanded: true,
+                                underline: Container(),
+                                dropdownColor: appColor.textColor3,
+                                items: [
+                                  DropdownMenuItem(
+                                    value: '🇮🇳',
+                                    child: Center(
+                                      child: Text(
+                                        '🇮🇳 +91',
+                                        // --- REFACTORED STYLE ---
+                                        style: fontStyles.primaryTextStyle
+                                            .copyWith(
+                                          color: appColor.textColor,
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                DropdownMenuItem(
-                                  value: '🇺🇸',
-                                  child: Center(
-                                    child: Text(
-                                      '🇺🇸 +1',
-                                      // --- REFACTORED STYLE ---
-                                      style:
-                                          fontStyles.primaryTextStyle.copyWith(
-                                        color: appColor.textColor,
+                                  DropdownMenuItem(
+                                    value: '🇺🇸',
+                                    child: Center(
+                                      child: Text(
+                                        '🇺🇸 +1',
+                                        // --- REFACTORED STYLE ---
+                                        style: fontStyles.primaryTextStyle
+                                            .copyWith(
+                                          color: appColor.textColor,
+                                          fontSize: 18.sp,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                DropdownMenuItem(
-                                  value: '🇬🇧',
-                                  child: Center(
-                                    child: Text(
-                                      '🇬🇧 +44',
-                                      // --- REFACTORED STYLE ---
-                                      style:
-                                          fontStyles.primaryTextStyle.copyWith(
-                                        color: appColor.textColor,
+                                  DropdownMenuItem(
+                                    value: '🇬🇧',
+                                    child: Center(
+                                      child: Text(
+                                        '🇬🇧 +44',
+                                        // --- REFACTORED STYLE ---
+                                        style: fontStyles.primaryTextStyle
+                                            .copyWith(
+                                          color: appColor.textColor,
+                                          fontSize: 18.sp,
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedCountryFlag = value!;
-                                  if (value == '🇮🇳')
-                                    selectedCountryCode = '+91';
-                                  if (value == '🇺🇸')
-                                    selectedCountryCode = '+1';
-                                  if (value == '🇬🇧')
-                                    selectedCountryCode = '+44';
-                                });
-                              },
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedCountryFlag = value!;
+                                    if (value == '🇮🇳')
+                                      selectedCountryCode = '+91';
+                                    if (value == '🇺🇸')
+                                      selectedCountryCode = '+1';
+                                    if (value == '🇬🇧')
+                                      selectedCountryCode = '+44';
+                                  });
+                                },
+                              ),
                             ),
                           ),
 
@@ -377,18 +387,23 @@ class _EnterScreenState extends State<EnterScreen> {
                                 // --- REFACTORED STYLE ---
                                 style: fontStyles.primaryTextStyle.copyWith(
                                   color: appColor.textColor,
+                                  letterSpacing: 3.8,
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w500,
                                 ),
                                 keyboardType: TextInputType.phone,
                                 decoration: InputDecoration(
                                   contentPadding: EdgeInsets.symmetric(
                                       horizontal: 15.w, vertical: 15.h),
                                   hintText: languageService.getString(
-                                      'enter_mobile_hint',
-                                ),
+                                    'enter_mobile_hint',
+                                  ),
                                   // --- REFACTORED STYLE ---
                                   hintStyle:
                                       fontStyles.primaryTextStyle.copyWith(
                                     color: const Color(0x99F5E9B5),
+                                    letterSpacing: 1.2,
+                                    fontSize: 16.sp,
                                   ),
                                   border: InputBorder.none,
                                 ),
@@ -421,13 +436,12 @@ class _EnterScreenState extends State<EnterScreen> {
                               ? null // Disable button when loading
                               : () {
                                   if (phoneController.text.isEmpty) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
+                                    ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           languageService.getString(
-                                              'please_enter_phone',
-                                             ),
+                                            'please_enter_phone',
+                                          ),
                                           style: fontStyles.errorstyle2,
                                         ),
                                         backgroundColor: appColor.errorColor,
@@ -460,8 +474,9 @@ class _EnterScreenState extends State<EnterScreen> {
                                     )
                                   : Center(
                                       child: Text(
-                                        languageService.getString('continue',
-                                            ),
+                                        languageService.getString(
+                                          'continue',
+                                        ),
                                         // --- This was already correct ---
                                         style: fontStyles.bodyText2.copyWith(
                                           color: appColor.textColor3,

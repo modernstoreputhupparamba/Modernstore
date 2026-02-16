@@ -12,10 +12,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:modern_grocery/bloc/Banner_/DeleteBanner_bloc/delete_banner_bloc.dart';
 import 'package:modern_grocery/bloc/Banner_/GetAllBannerBloc/get_all_banner_bloc.dart';
 import 'package:modern_grocery/bloc/Dashboard/dashboard_bloc.dart';
+import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
 // --- Adjust this import path as needed ---
 
 // ------------------------------------------
 import 'package:modern_grocery/ui/admin/admin_profile.dart';
+import 'package:modern_grocery/ui/admin/order_history.dart';
 import 'package:modern_grocery/ui/admin/upload_recentpage.dart';
 import 'package:modern_grocery/widgets/app_color.dart';
 import 'package:modern_grocery/widgets/fontstyle.dart';
@@ -41,6 +43,7 @@ class _DashboardState extends State<Dashboard> {
       if (mounted) {
         BlocProvider.of<GetAllBannerBloc>(context).add(FetchGetAllBannerEvent());
         BlocProvider.of<DashboardBloc>(context).add(FetchDashboardData());
+        BlocProvider.of<GetAllOrdersBloc>(context).add(FetchGetAllOrders());
       }
     });
   }
@@ -51,27 +54,45 @@ class _DashboardState extends State<Dashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0XFF0A0909), // Kept original color
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 44.h),
-            _buildAppBar(),
-            SizedBox(height: 40.h),
-            _buildSearchBar(),
-            SizedBox(height: 40.h),
-            _buildbanner(),
-            SizedBox(height: 20.h),
-            _buildSummaryCards(),
-            SizedBox(height: 20.h),
-            _buildStatsContainer(),
-            SizedBox(height: 20.h),
-            _buildTopCategoriesChart(),
-            SizedBox(height: 20.h),
-            _buildMonthlyOrdersChart(),
-            SizedBox(height: 20.h),
-          ],
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth > 600;
+            return SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 20.h),
+                  _buildAppBar(),
+                  SizedBox(height: 40.h),
+                  _buildSearchBar(),
+                  SizedBox(height: 40.h),
+                  _buildbanner(isTablet: isTablet),
+                  SizedBox(height: 20.h),
+                  _buildSummaryCards(),
+                  SizedBox(height: 20.h),
+                  _buildStatsContainer(),
+                  SizedBox(height: 20.h),
+                  if (isTablet)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: _buildTopCategoriesChart()),
+                        SizedBox(width: 20.w),
+                        Expanded(child: _buildMonthlyOrdersChart()),
+                      ],
+                    )
+                  else ...[
+                    _buildTopCategoriesChart(),
+                    SizedBox(height: 20.h),
+                    _buildMonthlyOrdersChart(),
+                  ],
+                  SizedBox(height: 20.h),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -82,10 +103,25 @@ class _DashboardState extends State<Dashboard> {
     return Row(
       children: [
         Spacer(),
-        badges.Badge(
-          badgeContent: Text('3',
-              style: fontStyles.bodyText2.copyWith(color: Colors.white)),
-          child: SvgPicture.asset('assets/Group.svg'),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const OrderHistory()));
+          },
+          child: BlocBuilder<GetAllOrdersBloc, GetAllOrdersState>(
+            builder: (context, state) {
+              int count = 0;
+              if (state is GetAllOrdersLoaded) {
+                count = state.getAllOrdersModel.orders?.where((element) => element.orderStatus?.toUpperCase() == 'ORDER_PLACED').length ?? 0;
+              }
+              return badges.Badge(
+                showBadge: count > 0,
+                badgeContent: Text('$count',
+                    style: fontStyles.bodyText2.copyWith(color: Colors.white)),
+                child: SvgPicture.asset('assets/Group.svg'),
+              );
+            },
+          ),
         ),
         SizedBox(width: 24.w),
         GestureDetector(
@@ -104,7 +140,7 @@ class _DashboardState extends State<Dashboard> {
   //
   // [--- THIS SECTION IS MODIFIED ---]
   //
- Widget _buildbanner() {
+  Widget _buildbanner({bool isTablet = false}) {
   return BlocBuilder<GetAllBannerBloc, GetAllBannerState>(
     builder: (context, state) {
       if (state is GetAllBannerLoaded) {
@@ -169,9 +205,9 @@ class _DashboardState extends State<Dashboard> {
                 );
               }).toList(),
               options: CarouselOptions(
-                height: 200.h,
-                aspectRatio: 16 / 9,
-                viewportFraction: 0.98,
+                height: isTablet ? 280.h : 200.h,
+                aspectRatio: isTablet ? 21 / 9 : 16 / 9,
+                viewportFraction: isTablet ? 0.85 : 0.98,
                 initialPage: 0,
                 enableInfiniteScroll: bannerImg.length > 1,
                 reverse: false,
@@ -260,169 +296,205 @@ class _DashboardState extends State<Dashboard> {
 
   // [--- END OF MODIFIED SECTION ---]
 
-  // --- UNCHANGED ---
+  // --- UNCHANGED ---// Add a controller at the top of your State class
+  final TextEditingController _searchController = TextEditingController();
+
   Widget _buildSearchBar() {
-    return Row(
+    return Row(mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Expanded(
-          child: Container(
-            height: 41.h,
-            padding: EdgeInsets.symmetric(horizontal: 12.w),
-            decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFFCF8E8), width: 2),
-              borderRadius: BorderRadius.circular(10.r),
-            ),
-            child: TextField(
-              style: GoogleFonts.poppins(color: const Color(0x91FCF8E8)),
-              decoration: InputDecoration(
-                hintText: "Search here",
-                hintStyle: GoogleFonts.poppins(
-                    color: const Color(0x91FCF8E8), fontSize: 12.sp),
-                border: InputBorder.none,
-              ),
-            ),
-          ),
-        ),
+        // Expanded(
+        //   child: Container(
+        //     height: 41.h,
+        //     padding: EdgeInsets.symmetric(horizontal: 12.w),
+        //     decoration: BoxDecoration(
+        //       border: Border.all(color: const Color(0xFFFCF8E8), width: 2),
+        //       borderRadius: BorderRadius.circular(10.r),
+        //     ),
+        //     child: TextField(
+        //       controller: _searchController, // Added controller
+        //       onSubmitted: (value) {
+        //         // Trigger search logic here
+        //         print("Searching for: $value");
+        //       },
+        //       style: GoogleFonts.poppins(color: const Color(0x91FCF8E8)),
+        //       decoration: InputDecoration(
+        //         hintText: "Search here",
+        //         hintStyle: GoogleFonts.poppins(
+        //             color: const Color(0x91FCF8E8), fontSize: 12.sp),
+        //         border: InputBorder.none,
+        //         // Optional: Add a clear button
+        //         suffixIcon: IconButton(
+        //           icon: Icon(Icons.clear, size: 16.sp, color: Colors.white70),
+        //           onPressed: () => _searchController.clear(),
+        //         ),
+        //       ),
+        //     ),
+        //   ),
+        // ),
         SizedBox(width: 16.w),
-       GestureDetector(
-  onTap: () {
-    // Save the page's context
-    final pageContext = context;
+        GestureDetector(
+          onTap: () {
+            final pageContext = context;
 
-    showDialog(
-      context: pageContext,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            // 1. Close the dialog with its own context
-            Navigator.of(dialogContext).pop();
+            showDialog(
+              context: pageContext,
+              builder: (dialogContext) => Dialog(
+                backgroundColor: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20.r),
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 80, // Optional: compress for faster upload
+                    );
 
-            // 2. Pick image
-            final picker = ImagePicker();
-            final pickedFile =
-                await picker.pickImage(source: ImageSource.gallery);
+                    // 1. Close dialog first
+                    Navigator.of(dialogContext).pop();
 
-            // 3. After await, check if the page is still mounted
-            if (pickedFile != null && mounted) {
-              print('Selected image: ${pickedFile.name}');
-
-              // 4. Use the PAGE context to push new route
-              Navigator.push(
-                pageContext,
-                MaterialPageRoute(
-                  builder: (ctx) => RecentPage(imagePath: pickedFile.name),
+                    // 2. Check if mounted and file is not null
+                    if (pickedFile != null && mounted) {
+                      // ✅ CRITICAL FIX: Use .path instead of .name
+                      Navigator.push(
+                        pageContext,
+                        MaterialPageRoute(
+                          builder: (ctx) => RecentPage(imagePath: pickedFile.path),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    width: 383.w,
+                    height: 222.h,
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3C3C3C),
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/upload.svg',
+                          height: 40.h,
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          "Add A Banner Image",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.sp,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          "Optimal dimensions 383*222",
+                          style: GoogleFonts.poppins(
+                            color: Colors.grey.shade300,
+                            fontSize: 12.sp,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const Spacer(), // Pushes the icon to the bottom
+                        Icon(
+                          Icons.add_circle,
+                          color: Colors.white,
+                          size: 30.sp,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              );
-            } else {
-              print('No image selected or widget unmounted.');
-            }
+              ),
+            );
           },
-          child: Container(
-            width: 383.w,
-            height: 222.h,
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3C3C3C),
-              borderRadius: BorderRadius.circular(20.r),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SvgPicture.asset(
-                  'assets/upload.svg',
-                  height: 40.h,
-                ),
-                SizedBox(height: 12.h),
-                Text(
-                  "Add A Banner Image",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.sp,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 6.h),
-                Text(
-                  "optimal dimensions 383*222",
-                  style: GoogleFonts.poppins(
-                    color: Colors.grey.shade300,
-                    fontSize: 12.sp,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 20.h),
-                Icon(
-                  Icons.add_circle,
-                  color: Colors.white,
-                  size: 30.sp,
-                ),
-              ],
-            ),
-          ),
+          child: SvgPicture.asset('assets/upload.svg'),
         ),
-      ),
-    );
-  },
-  child: SvgPicture.asset('assets/upload.svg'),
-),
-
       ],
     );
   }
 
   // --- UNCHANGED ---
-  Widget _buildSummaryCards() {
-    return BlocBuilder<DashboardBloc, DashboardState>(
-      builder: (context, state) {
-        if (state is DashboardLoaded) {
-          final data = state.dashboardModel.data;
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                SizedBox(width: 16),
-                SummaryCard(
-                    title: 'Total Orders',
-                    value: data?.totalOrders?.toString() ?? '0',
-                    icon: Icons.list),
-                SizedBox(width: 16),
-                SummaryCard(
-                    title: 'Total Customers',
-                    value: data?.totalUsers?.toString() ?? '0',
-                    icon: Icons.people),
-                SizedBox(width: 16),
-                SummaryCard(
-                    title: 'Total Categories',
-                    value: data?.totalCategories?.toString() ?? '0',
-                    icon: Icons.grid_view),
-                SizedBox(width: 16),
-                SummaryCard(
-                    title: 'Total Revenue',
-                    value: '\u20B9${data?.totalRevenue?.toString() ?? '0'}',
-                    icon: Icons.credit_card),
-                SizedBox(width: 16),
-              ],
+ Widget _buildSummaryCards() {
+  return BlocBuilder<DashboardBloc, DashboardState>(
+    builder: (context, state) {
+      if (state is DashboardLoaded) {
+        final data = state.dashboardModel.data;
+
+        return GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.6,
+          children: [
+            SummaryCard(
+              title: 'Total Orders',
+              value: data?.totalOrders?.toString() ?? '0',
+              icon: Icons.list,
             ),
-          );
-        }
-        // Shimmer for loading state
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: List.generate(
-              4,
-              (index) => Shimmer.fromColors(
-                  baseColor: Colors.grey[900]!,
-                  highlightColor: Colors.grey[800]!,
-                  child: SummaryCard(title: 'Loading...', value: '...', icon: Icons.hourglass_empty)),
+            SummaryCard(
+              title: 'Total Customers',
+              value: data?.totalUsers?.toString() ?? '0',
+              icon: Icons.people,
+            ),
+            SummaryCard(
+              title: 'Total Categories',
+              value: data?.totalCategories?.toString() ?? '0',
+              icon: Icons.grid_view,
+            ),
+            SummaryCard(
+              title: 'Total Revenue',
+              value: '₹${(data?.totalRevenue ?? 0).toStringAsFixed(2)}',
+              icon: Icons.credit_card,
+            ),
+          ],
+        );
+      }
+
+      if (state is DashboardError) {
+        return SizedBox(
+          height: 100.h,
+          child: Center(
+            child: Text(
+              "Data Error: ${state.message}\n(Check Model Types)",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                color: appColor.errorColor,
+                fontSize: 12.sp,
+              ),
             ),
           ),
         );
-      },
-    );
-  }
+      }
+
+      // ✅ Shimmer Loading Grid
+      return GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.6,
+        children: List.generate(
+          4,
+          (index) => Shimmer.fromColors(
+            baseColor: Colors.grey[900]!,
+            highlightColor: Colors.grey[800]!,
+            child: const SummaryCard(
+              title: 'Loading...',
+              value: '...',
+              icon: Icons.hourglass_empty,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
   // --- UNCHANGED ---
   Widget _buildStatsContainer() {
@@ -477,6 +549,14 @@ class _DashboardState extends State<Dashboard> {
                   ],
                 ),
               ],
+            );
+          } else if (state is DashboardError) {
+            return Center(
+              child: Text(
+                "Error: ${state.message}",
+                style: GoogleFonts.poppins(color: appColor.errorColor, fontSize: 12.sp),
+                textAlign: TextAlign.center,
+              ),
             );
           }
           // Shimmer for loading state
@@ -828,6 +908,10 @@ Widget _buildbannerDelete(String bannerId, BuildContext context) {
                   BlocProvider.of<DeleteBannerBloc>(context)
                       .add(fetchDeleteBannerEvent(BnnerId: bannerId));
                   Navigator.of(dialogContext).pop();
+                          BlocProvider.of<GetAllBannerBloc>(context).add(FetchGetAllBannerEvent());
+
+
+
                 },
               ),
             ],

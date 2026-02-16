@@ -112,7 +112,7 @@ class _FavouritePageState extends State<FavouritePage> {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => NavigationBarWidget(),
+                              builder: (context) => NavigationBarWidget(initialIndex: 0,),
                             ),
                           );
                         },
@@ -205,7 +205,7 @@ class _FavouritePageState extends State<FavouritePage> {
 
                             /// ✅ Button only shows if wishlist has items
                             Padding(
-                              padding: EdgeInsets.symmetric(vertical: 20.h),
+                              padding: EdgeInsets.symmetric(vertical: 24.h),
                               child: SizedBox(
                                 height: 48.h,
                                 width: 380.w,
@@ -415,11 +415,12 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
               children: [
                 InkWell(
                   onTap: () {
-                    final productId = widget.item['_id'];
+                    final productId = widget.item['productId'];
+                    final id = productId['_id'];
                     if (productId != null) {
                       context
                           .read<RemovetowishlistBloc>()
-                          .add(fetchRemovetowishlistEvent(productId));
+                          .add(fetchRemovetowishlistEvent(id));
                       Future.delayed(const Duration(milliseconds: 300), () {
                         context
                             .read<GetToWishlistBloc>()

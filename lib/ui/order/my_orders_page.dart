@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+
+import '../../bloc/Orders/Get_user_order/get_user_order_bloc.dart';
+import 'order_details_page.dart';
 
 class MyOrdersPage extends StatefulWidget {
   const MyOrdersPage({super.key});
@@ -23,7 +25,7 @@ class _MyOrdersPageState extends State<MyOrdersPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     // Fetch orders when page loads
-    context.read<GetAllOrdersBloc>().add(FetchGetAllOrders());
+    context.read<GetUserOrderBloc>().add(FetchGetUserOrders());
   }
 
   @override
@@ -81,19 +83,19 @@ class _MyOrdersPageState extends State<MyOrdersPage>
   }
 
   Widget _buildOrderList(String filterStatus) {
-    return BlocBuilder<GetAllOrdersBloc, GetAllOrdersState>(
+    return BlocBuilder<GetUserOrderBloc, GetUserOrderState>(
       builder: (context, state) {
-        if (state is GetAllOrdersLoading) {
+        if (state is GetUserOrderLoading) {
           return _buildShimmerLoading();
-        } else if (state is GetAllOrdersError) {
+        } else if (state is GetUserOrderError) {
           return Center(
             child: Text(
               state.message,
               style: GoogleFonts.poppins(color: Colors.red),
             ),
           );
-        } else if (state is GetAllOrdersLoaded) {
-          var orders = state.getAllOrdersModel.orders ?? [];
+        } else if (state is GetUserOrderLoaded) {
+          var orders = state.getUserOrderModel.orders!.reversed.toList() ?? [];
 
           // Filter logic
           if (filterStatus == "Delivered") {
@@ -136,62 +138,72 @@ class _MyOrdersPageState extends State<MyOrdersPage>
             separatorBuilder: (context, index) => SizedBox(height: 16.h),
             itemBuilder: (context, index) {
               final order = orders[index];
-              return Container(
-                padding: EdgeInsets.all(16.w),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1C1C1C),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: const Color(0xFF333333)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Order #${order.orderNo ?? order.id?.substring(0, 8) ?? 'N/A'}",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        _buildStatusBadge(order.orderStatus ?? 'Pending'),
-                      ],
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OrderDetailsPage(order: order),
                     ),
-                    SizedBox(height: 12.h),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Items: ${order.orderItems?.length ?? 0}",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white70,
-                            fontSize: 14.sp,
+                  );
+                },
+                child: Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C1C1C),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: const Color(0xFF333333)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Order #${order.orderNo ?? order.id?.substring(0, 8) ?? 'N/A'}",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "₹${order.finalAmount?.toStringAsFixed(2) ?? '0.00'}",
-                          style: GoogleFonts.poppins(
-                            color: const Color(0xFFF5E9B5),
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8.h),
-                    const Divider(color: Colors.white12),
-                    SizedBox(height: 8.h),
-                    Text(
-                      _formatDate(order.createdAt),
-                      style: GoogleFonts.poppins(
-                        color: Colors.white38,
-                        fontSize: 12.sp,
+                          _buildStatusBadge(order.orderStatus ?? 'Pending'),
+                        ],
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 12.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Items: ${order.orderItems?.length ?? 0}",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white70,
+                              fontSize: 14.sp,
+                            ),
+                          ),
+                          Text(
+                            "₹${order.finalAmount?.toStringAsFixed(2) ?? '0.00'}",
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFF5E9B5),
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      const Divider(color: Colors.white12),
+                      SizedBox(height: 8.h),
+                      Text(
+                        _formatDate(order.createdAt),
+                        style: GoogleFonts.poppins(
+                          color: Colors.white38,
+                          fontSize: 12.sp,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -208,7 +220,7 @@ class _MyOrdersPageState extends State<MyOrdersPage>
       case 'delivered':
         color = Colors.green;
         break;
-      case 'cancelled':
+      case 'canceled':
         color = Colors.red;
         break;
       case 'processing':

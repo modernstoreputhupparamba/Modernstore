@@ -9,13 +9,16 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    defaultConfig {
-        applicationId = "com.example.modern_grocery"
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
+ defaultConfig {
+    applicationId = "com.example.modern_grocery"
+
+    // ✅ FIX: force minSdk 21
+    minSdk = 21
+
+    targetSdk = flutter.targetSdkVersion
+    versionCode = flutter.versionCode
+    versionName = flutter.versionName
+}
 
     compileOptions {
         // Use Java 1.8 (like your other projects)

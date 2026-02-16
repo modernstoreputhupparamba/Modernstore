@@ -210,39 +210,45 @@ void _onSearchChanged() {
               builder: (context) => Product_list(CategoryId: categoryId,nav_type: 'home')),
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: appColor.primaryText,
-          borderRadius: BorderRadius.circular(22.r),
-        ),
-        child: Column( //
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CachedNetworkImage( // Use CachedNetworkImage
-              imageUrl: imageUrl,
-              height: 74.h,
-              width: 104.w,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Shimmer.fromColors( // Shimmer placeholder
-                baseColor: Colors.grey[300]!,
-                highlightColor: Colors.grey[100]!,
-                child: Container(color: Colors.white),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10.r),
+        child: Container(
+          decoration: BoxDecoration(
+            color: appColor.primaryText,
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          child: Column( //
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(10.r),
+                child: CachedNetworkImage( // Use CachedNetworkImage
+                  imageUrl: imageUrl,
+                  height: 128.h,
+                  width: 160.w,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Shimmer.fromColors( // Shimmer placeholder
+                    baseColor: Colors.grey[300]!,
+                    highlightColor: Colors.grey[100]!,
+                    child: Container(color: Colors.white),
+                  ),
+                  // errorBuilder: (context, error, stackTrace) {
+                  //   return const Icon(Icons.broken_image, color: Colors.grey); // Error icon
+                  // },
+                ),
               ),
-              // errorBuilder: (context, error, stackTrace) {
-              //   return const Icon(Icons.broken_image, color: Colors.grey); // Error icon
-              // },
-            ),
-            SizedBox(height: 13.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 27.w),
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                    fontSize: 14.sp, fontWeight: FontWeight.w500),
+              SizedBox(height: 13.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 27.w),
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                      fontSize: 14.sp, fontWeight: FontWeight.w500),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

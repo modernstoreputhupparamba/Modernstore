@@ -257,7 +257,7 @@ class _ManualLocationState extends State<ManualLocation> {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-                builder: (context) => const NavigationBarWidget()),
+                builder: (context) => const NavigationBarWidget(initialIndex: 0,)),
                 (route) => false,
           );
         },

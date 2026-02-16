@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:provider/provider.dart';
 
+import '../../bloc/delivery_/userdelivery addrees/userdeliveryaddress_bloc.dart';
 import 'add_new_address_page.dart';
 
 class MyAddressPage extends StatefulWidget {
@@ -14,82 +16,108 @@ class MyAddressPage extends StatefulWidget {
 }
 
 class _MyAddressPageState extends State<MyAddressPage> {
-  // Dummy data for addresses
-  final List<Map<String, String>> addresses = [
-    {
-      'type': 'Home',
-      'address': '123, Green Valley, Mountain View, CA, 94043, USA'
-    },
-    {
-      'type': 'Work',
-      'address': '456, Tech Park, Silicon Valley, CA, 94043, USA'
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return Consumer<LanguageService>(
-      builder: (context, languageService, child) {
-        return Scaffold(
-          backgroundColor: const Color(0XFF0A0909),
-          appBar: AppBar(
+    return BlocProvider(
+      create: (context) =>
+          UserdeliveryaddressBloc()..add(FetchUserdeliveryaddressEvent()),
+      child: Consumer<LanguageService>(
+        builder: (context, languageService, child) {
+          return Scaffold(
             backgroundColor: const Color(0XFF0A0909),
-            leading: const BackButton(color: Color(0xffFCF8E8)),
-            title: Text(
-              languageService.getString('my_address'),
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFFCF8E8),
-                fontSize: 24.sp,
-                fontWeight: FontWeight.w500,
+            appBar: AppBar(
+              backgroundColor: const Color(0XFF0A0909),
+              leading: const BackButton(color: Color(0xffFCF8E8)),
+              title: Text(
+                languageService.getString('my_address'),
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFFCF8E8),
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              centerTitle: true,
+            ),
+            body: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: BlocBuilder<UserdeliveryaddressBloc,
+                        UserdeliveryaddressState>(
+                      builder: (context, state) {
+                        if (state is UserdeliveryaddressLoading) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFFF5E9B5)));
+                        } else if (state is UserdeliveryaddressError) {
+                          return Center(
+                              child: Text(state.message,
+                                  style: GoogleFonts.poppins(color: Colors.red)));
+                        } else if (state is UserdeliveryaddressLoaded) {
+                          final addresses =
+                              state.addresses.data ?? [];
+                          if (addresses.isEmpty) {
+                            return Center(
+                                child: Text("No addresses found",
+                                    style: GoogleFonts.poppins(
+                                        color: Colors.white)));
+                          }
+                          return ListView.separated(
+                            itemCount: addresses.length,
+                            itemBuilder: (context, index) {
+                              final item = addresses[index];
+                              String fullAddress = item.address ?? "";
+                              if (item.city != null) fullAddress += ", ${item.city}";
+                              if (item.pincode != null) fullAddress += ", ${item.pincode}";
+                              return _buildAddressCard('Home', fullAddress);
+                            },
+                            separatorBuilder: (context, index) =>
+                                SizedBox(height: 20.h),
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 20.h),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF5E9B5),
+                      minimumSize: Size(double.infinity, 50.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const AddNewAddressPage()),
+                      ).then((_) {
+                        if (context.mounted) {
+                          context
+                              .read<UserdeliveryaddressBloc>()
+                              .add(FetchUserdeliveryaddressEvent());
+                        }
+                      });
+                    },
+                    icon: const Icon(Icons.add, color: Colors.black),
+                    label: Text(
+                      languageService.getString('add_new_address'),
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            centerTitle: true,
-          ),
-          body: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-            child: Column(
-              children: [
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: addresses.length,
-                    itemBuilder: (context, index) {
-                      final item = addresses[index];
-                      return _buildAddressCard(item['type']!, item['address']!);
-                    },
-                    separatorBuilder: (context, index) => SizedBox(height: 20.h),
-                  ),
-                ),
-                SizedBox(height: 20.h),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF5E9B5),
-                    minimumSize: Size(double.infinity, 50.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AddNewAddressPage()),
-                    );
-                  },
-                  icon: const Icon(Icons.add, color: Colors.black),
-                  label: Text(
-                    languageService.getString('add_new_address'),
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
