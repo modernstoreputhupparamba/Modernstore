@@ -27,13 +27,38 @@ android {
     }
 
     kotlinOptions {
-        // JVM target also 1.8
-        jvmTarget = "1.8"
+        // Match Kotlin JVM target to Java 21
+        jvmTarget = "21"
     }
 
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
+        }
+    }
+
+    // ✅ Flavor Dimension
+    flavorDimensions += "app"
+
+    // ✅ Product Flavors
+    productFlavors {
+
+        user {
+            dimension = "app"
+
+            applicationIdSuffix = ".user"
+            versionNameSuffix = "-user"
+
+            resValue "string", "app_name", "Modern Grocery User"
+        }
+
+        admin {
+            dimension = "app"
+
+            applicationIdSuffix = ".admin"
+            versionNameSuffix = "-admin"
+
+            resValue "string", "app_name", "Modern Grocery Admin"
         }
     }
 }
