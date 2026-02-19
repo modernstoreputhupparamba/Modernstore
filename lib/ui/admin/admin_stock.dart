@@ -36,9 +36,8 @@ class _AdminStockState extends State<AdminStock> {
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredStocks = _allStocks.where((stock) => stock.productId?.name?.toLowerCase().contains(query) ?? false).toList();
+      // Trigger rebuild; filtering logic is now in _buildStockBloc
     });
   }
 
@@ -160,8 +159,11 @@ class _AdminStockState extends State<AdminStock> {
 
         if (state is GetAllStockLoaded) {
           _allStocks = state.stockModel.data ?? [];
-          if (_searchController.text.isEmpty) _filteredStocks = _allStocks;
-          final stocks = _filteredStocks;
+          final query = _searchController.text.toLowerCase();
+          final stocks = query.isEmpty
+              ? _allStocks
+              : _allStocks.where((stock) => stock.productId?.name?.toLowerCase().contains(query) ?? false).toList();
+
           if (stocks.isEmpty) {
             return const Center(
               child: Text(

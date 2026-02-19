@@ -34,9 +34,9 @@ class Data {
   ProductId? productId;
   String? sku;
   String? unit;
-  int? quantityInStock;
-  int? soldQuantity;
-  int? totalStock;
+  num? quantityInStock;
+  num? soldQuantity;
+  num? totalStock;
   String? createdAt;
   String? updatedAt;
   int? v;
