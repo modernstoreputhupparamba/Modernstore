@@ -167,7 +167,8 @@ class _Product_listState extends State<Product_list> {
 
           if (_searchQuery.isNotEmpty) {
             products = products
-                .where((p) => (p.name?.toLowerCase() ?? '').contains(_searchQuery))
+                .where((p) => (p.name?.toLowerCase() ?? '').contains(_searchQuery) ||
+                    (p.subName?.toLowerCase() ?? '').contains(_searchQuery))
                 .toList();
           }
 
@@ -208,7 +209,8 @@ class _Product_listState extends State<Product_list> {
 
           if (_searchQuery.isNotEmpty) {
             products = products
-                .where((p) => (p.name?.toLowerCase() ?? '').contains(_searchQuery))
+                .where((p) => (p.name?.toLowerCase() ?? '').contains(_searchQuery) ||
+                    (p.subName?.toLowerCase() ?? '').contains(_searchQuery))
                 .toList();
           }
 

@@ -6,6 +6,8 @@ import 'package:modern_grocery/bloc/Banner_/DeleteBanner_bloc/delete_banner_bloc
 import 'package:modern_grocery/bloc/Categories_/GetAllCategories/get_all_categories_bloc.dart';
 import 'package:modern_grocery/bloc/Login_/verify/verify_bloc.dart';
 import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
+import 'package:modern_grocery/bloc/Product_/product%20delete/delete_product_bloc.dart';
+import 'package:modern_grocery/bloc/Product_/product%20image%20delete/delete_image_bloc.dart';
 import 'package:modern_grocery/bloc/User/userprofile/userprofile_bloc.dart';
 import 'package:modern_grocery/bloc/wishList/AddToWishlist_bloc/add_to_wishlist_bloc.dart';
 import 'package:modern_grocery/bloc/Banner_/CreateBanner_bloc/create_banner_bloc.dart';
@@ -51,8 +53,7 @@ import 'bloc/User/Edit_profile/edit_profile_bloc.dart';
 
 String basePath = "http://72.60.102.197:4055/api";
 
-final GlobalKey<NavigatorState> navigatorKey =
-GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   runApp(const MyApp());
@@ -136,7 +137,7 @@ class MyApp extends StatelessWidget {
                   //    where it is used, to ensure a fresh instance for each upload.
                   BlocProvider(
                       create: (context) =>
-                          CreateBannerBloc(api: CreateBannerApi ())),
+                          CreateBannerBloc(api: CreateBannerApi())),
                   // BEVERAGES BLOC - First Instance
                   BlocProvider(
                     create: (context) => GetCategoryProductsBloc(),
@@ -174,11 +175,17 @@ class MyApp extends StatelessWidget {
                   BlocProvider(
                     create: (context) => CancelOrderBloc(),
                   ),
-                    BlocProvider(
+                  BlocProvider(
                     create: (context) => EditProfileBloc(),
                   ),
+                  BlocProvider(
+                    create: (context) => DeleteProductBloc(),
+                  ),
+                  BlocProvider(
+                    create: (context) => DeleteImageBloc(),
+                  ),
 
-                    BlocProvider(
+                  BlocProvider(
                     create: (context) => UploadImageBloc(),
                   ),
                   BlocProvider(

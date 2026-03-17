@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 
-
 import '../../../repositery/api/product/updateProduct_api.dart';
 import '../../../repositery/model/product/updateProduct_model.dart';
 
@@ -19,12 +18,14 @@ class UpdateProductBloc extends Bloc<UpdateProductEvent, UpdateProductState> {
         final model = await updateProductApi.updateProduct(
           productId: event.productId,
           productName: event.productName,
+          productSubName: event.productSubName,
           productDescription: event.productDescription,
           price: event.price,
           imageFile: event.imageFile, // Can be null
           categoryId: event.categoryId,
           discountPercentage: event.discountPercentage,
           unit: event.unit,
+          selectableQuantities: event.selectableQuantities
         );
         emit(UpdateProductLoaded(updateProduct: model));
       } catch (e) {

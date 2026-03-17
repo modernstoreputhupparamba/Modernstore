@@ -6,6 +6,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:modern_grocery/bloc/Categories_/GetAllCategories/get_all_categories_bloc.dart';
 
+import 'package:modern_grocery/bloc/Product_/product image delete/delete_image_bloc.dart';
+import 'package:modern_grocery/bloc/Product_/product delete/delete_product_bloc.dart';
 import 'package:modern_grocery/bloc/Product_/createProduct/create_product_bloc.dart'; // Keep this for the dialog
 import 'package:modern_grocery/bloc/Product_/update_product/update_product_bloc.dart';
 import 'package:modern_grocery/bloc/Product_/get_all_product/get_all_product_bloc.dart';
@@ -40,10 +42,14 @@ class _AdminProductState extends State<AdminProduct> {
   File? _image;
   String? _imageFileType;
   bool _isUploading = false;
-List<String>? networkImageUrls; // Changed from single String to List
+  List<String>? networkImageUrls; // Changed from single String to List
   String? selectedCategoryId;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  // New variables for Selectable Quantities
+  final TextEditingController quantityController = TextEditingController();
+  List<String> _selectableQuantities = [];
 
   @override
   void initState() {
@@ -56,9 +62,18 @@ List<String>? networkImageUrls; // Changed from single String to List
   final ImagePicker _picker = ImagePicker();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController nameController = TextEditingController();
+  final TextEditingController subNameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
   String? _selectedUnit;
-  final List<String> _unitOptions = ["KG", "G", "MG", "LTR", "PCS", "BOX", "PACKET"];
+  final List<String> _unitOptions = [
+    "KG",
+    "G",
+    "MG",
+    "LTR",
+    "PCS",
+    "BOX",
+    "PACKET"
+  ];
   final TextEditingController discountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 
@@ -66,6 +81,7 @@ List<String>? networkImageUrls; // Changed from single String to List
   void dispose() {
     _searchController.dispose();
     nameController.dispose();
+    subNameController.dispose();
     priceController.dispose();
     discountController.dispose();
     descriptionController.dispose();
@@ -134,76 +150,82 @@ List<String>? networkImageUrls; // Changed from single String to List
   }
 
   void _showAddProductDialog(BuildContext context) {
+    _selectableQuantities.clear();
+    quantityController.clear();
+
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return BlocListener<CreateProductBloc, CreateProductState>(
-          // Use the CreateProductBloc from the parent context
-          listener: (ctx, state) {
-            if (state is CreateProductILoading) {
-              setState(() => _isUploading = true);
-            } else {
-              setState(() => _isUploading = false);
-            }
+        return StatefulBuilder(builder: (context, setStateDialog) {
+          return BlocListener<CreateProductBloc, CreateProductState>(
+            // Use the CreateProductBloc from the parent context
+            listener: (ctx, state) {
+              if (state is CreateProductILoading) {
+                setStateDialog(() => _isUploading = true);
+              } else {
+                setStateDialog(() => _isUploading = false);
+              }
 
-            if (state is CreateProductLoaded) {
-              // ✅ Clear form + image
-              setState(() {
-                _image = null;
-                networkImageUrls = null;
-                selectedCategoryId = null;
-                nameController.clear();
-                priceController.clear();
-                _selectedUnit = null;
-                discountController.clear();
-                descriptionController.clear();
-              });
+              if (state is CreateProductLoaded) {
+                // ✅ Clear form + image
+                setState(() {
+                  _image = null;
+                  networkImageUrls = null;
+                  selectedCategoryId = null;
+                  nameController.clear();
+                  subNameController.clear();
+                  priceController.clear();
+                  _selectedUnit = null;
+                  discountController.clear();
+                  descriptionController.clear();
+                  _selectableQuantities = [];
+                  quantityController.clear();
+                });
 
-              // ✅ Refresh product list
-              context.read<GetAllProductBloc>().add(fetchGetAllProduct(
-                ''
-              ));
+                // ✅ Refresh product list
+                context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
 
-              // ✅ Close dialog
-              Navigator.of(dialogContext).pop();
+                // ✅ Close dialog
+                Navigator.of(dialogContext).pop();
 
-              // ✅ Show success
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Product added successfully'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            } else if (state is CreateProductError) {
-              Utils().toastMessage(state.message);
+                // ✅ Show success
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Product added successfully'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              } else if (state is CreateProductError) {
+                Utils().toastMessage(state.message);
 
-              // ScaffoldMessenger.of(context).showSnackBar(
-              //   SnackBar(
-              //     content: Text(
-              //         'Failed to create product: ${state.message}'),
-              //     backgroundColor: Colors.red,
-              //     duration: const Duration(seconds: 0),
-              //   ),
-              // );
-              print(state.message);
-            }
-          },
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_AppConstants.dialogRadius),
-            ), // Use constant
-            backgroundColor:
-                const Color(0xFFFCF8E8), // Light background for dialog
-            title: const Text(
-              'Add Product',
-              style: TextStyle(color: Color(0xFF0A0909)), // Dark text
-            ), // Use constant
-            content:
-                _buildAddProductForm(), // just extracted below for cleanliness
-            actions: _buildDialogActions(context),
-          ),
-        );
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   SnackBar(
+                //     content: Text(
+                //         'Failed to create product: ${state.message}'),
+                //     backgroundColor: Colors.red,
+                //     duration: const Duration(seconds: 0),
+                //   ),
+                // );
+                print(state.message);
+              }
+            },
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_AppConstants.dialogRadius),
+              ), // Use constant
+              backgroundColor:
+                  const Color(0xFFFCF8E8), // Light background for dialog
+              title: const Text(
+                'Add Product',
+                style: TextStyle(color: Color(0xFF0A0909)), // Dark text
+              ),
+              content: _buildAddProductForm(
+                  setStateDialog), // just extracted below for cleanliness
+              actions: _buildDialogActions(context),
+            ),
+          );
+        });
       },
     );
   }
@@ -211,6 +233,7 @@ List<String>? networkImageUrls; // Changed from single String to List
   void _showEditProductDialog(BuildContext context, Data productData) {
     // Prefill data for editing
     nameController.text = productData.name ?? '';
+    subNameController.text = productData.subName ?? '';
     priceController.text = productData.basePrice?.toString() ?? '';
     _selectedUnit = null;
     if (productData.unit != null) {
@@ -221,8 +244,11 @@ List<String>? networkImageUrls; // Changed from single String to List
     discountController.text = productData.discountPercentage?.toString() ?? '';
     descriptionController.text = productData.description ?? '';
     selectedCategoryId = productData.category?.id;
-    networkImageUrls = productData.images; // Assign the full list
+    networkImageUrls = List<String>.from(productData.images ?? []); // Added strict type-casting
     _image = null; // Clear local image when starting an edit
+
+    _selectableQuantities = productData.selectableQuantities?.map((e) => e.toString()).toList() ?? []; // Prevent erasing quantities on edit
+    quantityController.clear();
 
     showDialog(
       context: context,
@@ -232,73 +258,101 @@ List<String>? networkImageUrls; // Changed from single String to List
             // Provide UpdateProductBloc locally to the dialog
             BlocProvider(create: (context) => UpdateProductBloc()),
           ],
-          child: BlocListener<UpdateProductBloc, UpdateProductState>(
-            listener: (ctx, state) {
-              if (state is UpdateProductLoading) {
-                setState(() => _isUploading = true);
-              } else {
-                setState(() => _isUploading = false);
-              }
+          child: StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return MultiBlocListener(
+                listeners: [
+                  BlocListener<UpdateProductBloc, UpdateProductState>(
+                    listener: (ctx, state) {
+                      if (state is UpdateProductLoading) {
+                        setStateDialog(() => _isUploading = true);
+                      } else {
+                        setStateDialog(() => _isUploading = false);
+                      }
 
-              if (state is UpdateProductLoaded) {
-                // Clear form + image
-                setState(() {
-                  _image = null;
-                  networkImageUrls = null;
-                  selectedCategoryId = null;
-                  nameController.clear();
-                  priceController.clear();
-                  _selectedUnit = null;
-                  discountController.clear();
-                  descriptionController.clear();
-                });
+                      if (state is UpdateProductLoaded) {
+                        // Clear form + image
+                        setState(() {
+                          _image = null;
+                          networkImageUrls = null;
+                          selectedCategoryId = null;
+                          nameController.clear();
+                          subNameController.clear();
+                          priceController.clear();
+                          _selectedUnit = null;
+                          discountController.clear();
+                          descriptionController.clear();
+                          _selectableQuantities = [];
+                          quantityController.clear();
+                        });
 
-                // Refresh product list
-                context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
+                        // Refresh product list
+                        context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
 
-                // Close dialog
-                Navigator.of(dialogContext).pop();
+                        // Close dialog
+                        Navigator.of(dialogContext).pop();
 
-                // Show success
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Product updated successfully'),
-                    backgroundColor: Colors.green,
+                        // Show success
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Product updated successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else if (state is UpdateProductError) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to update product: ${state.message}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                   ),
-                );
-              } else if (state is UpdateProductError) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to update product: ${state.message}'),
-                    backgroundColor: Colors.red,
+                  BlocListener<DeleteImageBloc, DeleteImageState>(
+                    listener: (context, state) {
+                      if (state is DeleteImageLoaded) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Image deleted successfully'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
+                      } else if (state is DeleteImageError) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to delete image: ${state.message}'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                   ),
-                );
-              }
+                ],
+                child: Builder(
+                  builder: (innerContext) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(_AppConstants.dialogRadius),
+                      ),
+                      backgroundColor: const Color(0xFFFCF8E8),
+                      title: const Text('Edit Product', style: TextStyle(color: Color(0xFF0A0909))),
+                      content: _buildAddProductForm(setStateDialog, productData),
+                      actions: _buildDialogActions(innerContext, productData),
+                    );
+                  },
+                ),
+              );
             },
-            child: Builder(
-              builder: (innerContext) {
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(_AppConstants.dialogRadius),
-                  ),
-                  backgroundColor: const Color(0xFFFCF8E8),
-                  title: const Text(
-                    'Edit Product',
-                    style: TextStyle(color: Color(0xFF0A0909)),
-                  ),
-                  content: _buildAddProductForm(),
-                  actions: _buildDialogActions(innerContext, productData),
-                );
-              },
-            ),
           ),
         );
       },
     );
   }
 
-   Widget _buildAddProductForm() {
+  Widget _buildAddProductForm(StateSetter setStateDialog, [Data? productData]) {
     return SizedBox(
       width: double.maxFinite,
       child: SingleChildScrollView(
@@ -312,32 +366,50 @@ List<String>? networkImageUrls; // Changed from single String to List
                 children: [
                   _buildTextField(nameController, 'Product Name', 'Required'),
                   SizedBox(height: 12.h),
-                  
+                  _buildTextField(
+                      subNameController, 'Product Sub Name', 'Required'),
+                  SizedBox(height: 12.h),
+
                   // Safe Category Dropdown
                   BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
                     builder: (context, state) {
                       if (state is GetAllCategoriesLoaded) {
                         // CRITICAL FIX: Ensure the selected ID exists in the items list
-                        final bool valueExists = state.categories.any((c) => c.id == selectedCategoryId);
-                        
+                        final bool valueExists = state.categories
+                            .any((c) => c.id == selectedCategoryId);
+
                         return DropdownButtonFormField<String>(
                           value: valueExists ? selectedCategoryId : null,
-                          items: state.categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name ?? ''))).toList(),
-                          onChanged: (val) => setState(() => selectedCategoryId = val),
-                          decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
+                          items: state.categories
+                              .map((c) => DropdownMenuItem(
+                                  value: c.id, child: Text(c.name ?? '')))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() => selectedCategoryId = val);
+                            setStateDialog(() {});
+                          },
+                          decoration: const InputDecoration(
+                              labelText: 'Category',
+                              border: OutlineInputBorder()),
                           validator: (v) => v == null ? 'Required' : null,
                         );
                       }
                       return const LinearProgressIndicator();
                     },
                   ),
-                  
+
                   SizedBox(height: 12.h),
                   Row(
                     children: [
-                      Expanded(child: _buildTextField(priceController, 'Price', 'Req', keyboardType: TextInputType.number)),
+                      Expanded(
+                          child: _buildTextField(
+                              priceController, 'Price', 'Req',
+                              keyboardType: TextInputType.number)),
                       SizedBox(width: 8.w),
-                      Expanded(child: _buildTextField(discountController, 'Disc%', 'Req', keyboardType: TextInputType.number)),
+                      Expanded(
+                          child: _buildTextField(
+                              discountController, 'Disc%', 'Req',
+                              keyboardType: TextInputType.number)),
                     ],
                   ),
                   SizedBox(height: 12.h),
@@ -351,8 +423,10 @@ List<String>? networkImageUrls; // Changed from single String to List
                     }).toList(),
                     onChanged: (newValue) {
                       setState(() => _selectedUnit = newValue);
+                      setStateDialog(() {});
                     },
-                    style: const TextStyle(color: Color(0xFF0A0909), fontSize: 16),
+                    style:
+                        const TextStyle(color: Color(0xFF0A0909), fontSize: 16),
                     decoration: InputDecoration(
                       labelText: 'Unit',
                       labelStyle: TextStyle(color: Colors.grey[700]),
@@ -362,15 +436,98 @@ List<String>? networkImageUrls; // Changed from single String to List
                     ),
                     validator: (value) => value == null ? 'Required' : null,
                   ),
+
+                  // --- NEW SELECTABLE QUANTITY SECTION ---
                   SizedBox(height: 12.h),
-                  _buildTextField(descriptionController, 'Description', 'Required', maxLines: 3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: quantityController,
+                          style: const TextStyle(color: Color(0xFF0A0909)),
+                          decoration: InputDecoration(
+                            labelText: 'Selectable Quantity (e.g. 1 kg)',
+                            labelStyle: TextStyle(color: Colors.grey[700]),
+                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _AppConstants.buttonColor,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.add),
+                          color: Colors.black,
+                          onPressed: () {
+                            if (quantityController.text.trim().isNotEmpty) {
+                              setStateDialog(() {
+                                _selectableQuantities
+                                    .add(quantityController.text.trim());
+                                quantityController.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_selectableQuantities.isNotEmpty) ...[
+                    SizedBox(height: 8.h),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(8.w),
+                      decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(4)),
+                      child: Wrap(
+                        spacing: 8.0,
+                        runSpacing: 4.0,
+                        children:
+                            _selectableQuantities.asMap().entries.map((entry) {
+                          int idx = entry.key;
+                          String qty = entry.value;
+                          return Chip(
+                            label: Text(qty, style: TextStyle(fontSize: 12.sp)),
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: BorderSide(color: Colors.grey.shade400)),
+                            deleteIcon: const Icon(Icons.cancel,
+                                size: 18, color: Colors.red),
+                            onDeleted: () {
+                              setStateDialog(() {
+                                _selectableQuantities.removeAt(idx);
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                  // ---------------------------------------
+
+                  SizedBox(height: 12.h),
+                  _buildTextField(
+                      descriptionController, 'Description', 'Required',
+                      maxLines: 3),
                   SizedBox(height: 16.h),
 
                   // Image Picker Button
                   ElevatedButton.icon(
-                    onPressed: _pickImage,
+                    onPressed: () async {
+                      await _pickImage();
+                      setStateDialog(
+                          () {}); // Now this works because setStateDialog is passed
+                    },
                     icon: const Icon(Icons.add_a_photo),
-                    label: Text(_image == null ? "Pick Image" : "Change New Image"),
+                    label: Text(
+                        _image == null ? "Pick Image" : "Change New Image"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _AppConstants.buttonColor,
                       minimumSize: Size(double.infinity, 40.h),
@@ -378,23 +535,50 @@ List<String>? networkImageUrls; // Changed from single String to List
                   ),
 
                   // --- IMAGE LIST SECTION ---
-                  if (_image != null || (networkImageUrls != null && networkImageUrls!.isNotEmpty)) ...[
+                  if (_image != null ||
+                      (networkImageUrls != null &&
+                          networkImageUrls!.isNotEmpty)) ...[
                     SizedBox(height: 12.h),
                     SizedBox(
                       height: 100.h,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
-                        itemCount: (networkImageUrls?.length ?? 0) + (_image != null ? 1 : 0),
-                        separatorBuilder: (context, index) => SizedBox(width: 8.w),
+                        itemCount: (networkImageUrls?.length ?? 0) +
+                            (_image != null ? 1 : 0),
+                        separatorBuilder: (context, index) =>
+                            SizedBox(width: 8.w),
                         itemBuilder: (context, index) {
                           if (_image != null && index == 0) {
-                            return _buildImageItem(Image.file(_image!, fit: BoxFit.cover), "New");
+                            return _buildImageItem(
+                                Image.file(_image!, fit: BoxFit.cover), "New", () {
+                              setStateDialog(() {
+                                _image = null;
+                              });
+                            });
                           }
                           final netIndex = _image != null ? index - 1 : index;
                           return _buildImageItem(
-                            Image.network(networkImageUrls![netIndex], fit: BoxFit.cover, errorBuilder: (_,__,___) => const Icon(Icons.error)),
-                            "Existing"
-                          );
+                              Image.network(networkImageUrls![netIndex], // This is imageUrl
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.error)),
+                              "Existing", () {
+                            // This is in edit mode, so productData is not null.
+                            if (productData != null) {
+                              final imageUrlToDelete = networkImageUrls![netIndex];
+                              _showDeleteImageConfirmationDialog(
+                                context,
+                                productData.id!,
+                                imageUrlToDelete,
+                                () {
+                                  // onConfirm: remove from local list
+                                  setStateDialog(() {
+                                    networkImageUrls!.remove(imageUrlToDelete);
+                                  });
+                                },
+                              );
+                            }
+                          });
                         },
                       ),
                     ),
@@ -407,27 +591,52 @@ List<String>? networkImageUrls; // Changed from single String to List
       ),
     );
   }
-Widget _buildImageItem(Widget imageWidget, String label) {
-  return Column(
-    children: [
-      Expanded(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8.r),
-          child: Container(
-            width: 100.w,
-            color: Colors.grey[200],
-            child: imageWidget,
+
+  Widget _buildImageItem(Widget imageWidget, String label, VoidCallback onRemove) {
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.r),
+                child: Container(
+                  width: 100.w,
+                  color: Colors.grey[200],
+                  child: imageWidget,
+                ),
+              ),
+              Positioned(
+                top: 4.h,
+                right: 4.w,
+                child: GestureDetector(
+                  onTap: onRemove,
+                  child: Container(
+                    padding: EdgeInsets.all(2.w),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black54,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 14.sp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-      SizedBox(height: 4.h),
-      Text(
-        label,
-        style: TextStyle(fontSize: 10.sp, color: Colors.grey[700]),
-      ),
-    ],
-  );
-}
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10.sp, color: Colors.grey[700]),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTextField(
       TextEditingController controller, String label, String validationMsg,
       {int maxLines = 1,
@@ -460,10 +669,13 @@ Widget _buildImageItem(Widget imageWidget, String label) {
             _image = null;
             selectedCategoryId = null;
             nameController.clear();
+            subNameController.clear();
             descriptionController.clear();
             priceController.clear();
             _selectedUnit = null;
             discountController.clear();
+            _isUploading = false;
+            quantityController.clear();
             _isUploading = false;
           });
         },
@@ -504,6 +716,7 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                   context.read<CreateProductBloc>().add(
                         fetchCreateProduct(
                           productName: nameController.text.trim(),
+                          productSubName: subNameController.text.trim(),
                           productDescription: descriptionController.text.trim(),
                           categoryId: selectedCategoryId!,
                           price: priceController.text.trim(),
@@ -513,6 +726,7 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                                       discountController.text.trim()) ??
                                   0.0)
                               .toString(),
+                          selectableQuantities: _selectableQuantities,
                         ),
                       );
                 } else {
@@ -521,6 +735,7 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                   context.read<UpdateProductBloc>().add(FetchUpdateProduct(
                         productId: productData.id!,
                         productName: nameController.text.trim(),
+                        productSubName: subNameController.text.trim(),
                         productDescription: descriptionController.text.trim(),
                         price: priceController.text.trim(),
                         unit: _selectedUnit!,
@@ -529,7 +744,11 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                             (double.tryParse(discountController.text.trim()) ??
                                     0.0)
                                 .toString(),
-                        imageFile: _image, // Pass the new image if selected
+                        imageFile: <dynamic>[
+                          if (_image != null) _image,
+                          if (networkImageUrls != null) ...networkImageUrls!
+                        ],
+                        selectableQuantities: _selectableQuantities,
                       ));
                 }
               },
@@ -547,63 +766,151 @@ Widget _buildImageItem(Widget imageWidget, String label) {
     ];
   }
 
+  void _showDeleteConfirmationDialog(BuildContext context, Data product) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFFCF8E8),
+          title: const Text('Delete Product', style: TextStyle(color: Color(0xFF0A0909))),
+          content: Text('Are you sure you want to delete "${product.name}"?', style: const TextStyle(color: Colors.black87)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.blue)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                // Trigger the delete product event
+                context.read<DeleteProductBloc>().add(FetchDeleteProduct(productId: product.id!));
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteImageConfirmationDialog(
+    BuildContext dialogContext, // Pass the dialog's context
+    String productId,
+    String imageUrl,
+    VoidCallback onConfirm,
+  ) {
+    showDialog(
+      context: dialogContext,
+      builder: (BuildContext alertContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFFFCF8E8),
+          title: const Text('Delete Image?', style: TextStyle(color: Color(0xFF0A0909))),
+          content: const Text(
+            'This action cannot be undone. Are you sure you want to delete this image permanently?',
+            style: TextStyle(color: Colors.black87),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(alertContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.blue)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                // Use the dialog's context to read the bloc
+                dialogContext.read<DeleteImageBloc>().add(
+                      FetchDeleteImage(productId: productId, imageUrl: imageUrl),
+                    );
+                onConfirm(); // Update UI locally
+                Navigator.of(alertContext).pop(); // Close the alert
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _AppConstants.backgroundColor,
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 20.h),
-              // _buildAppBar(),
-              SizedBox(height: 24.h),
-              _buildSearchBar(),
-              SizedBox(height: 24.h),
-              Align(
-                alignment: Alignment.centerRight, // Add Product Button
-                child: GestureDetector(
-                  onTap: () => _showAddProductDialog(context),
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: _AppConstants.primaryColor,
-                      borderRadius: BorderRadius.circular(24.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4.r,
-                          offset: Offset(0, 2.h),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add_circle_outline_outlined,
-                            color: Colors.black, size: 20.w),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Add Products',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 14.sp,
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
+    return BlocListener<DeleteProductBloc, DeleteProductState>(
+      listener: (context, state) {
+        if (state is DeleteProductLoaded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Product deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Refresh list
+          context.read<GetAllProductBloc>().add(fetchGetAllProduct(''));
+        } else if (state is DeleteProductError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete product: ${state.message}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _AppConstants.backgroundColor,
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20.h),
+                // _buildAppBar(),
+                SizedBox(height: 24.h),
+                _buildSearchBar(),
+                SizedBox(height: 24.h),
+                Align(
+                  alignment: Alignment.centerRight, // Add Product Button
+                  child: GestureDetector(
+                    onTap: () => _showAddProductDialog(context),
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: _AppConstants.primaryColor,
+                        borderRadius: BorderRadius.circular(24.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4.r,
+                            offset: Offset(0, 2.h),
                           ),
-                          semanticsLabel: 'Add products button',
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_circle_outline_outlined,
+                              color: Colors.black, size: 20.w),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Add Products',
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 14.sp,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                            ),
+                            semanticsLabel: 'Add products button',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              SizedBox(height: 16.h),
-              Expanded(child: _buildCategorizedProductList()),
-            ],
+                SizedBox(height: 16.h),
+                Expanded(child: _buildCategorizedProductList()),
+              ],
+            ),
           ),
         ),
       ),
@@ -655,7 +962,7 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                 _searchQuery = value.toLowerCase();
               });
             },
-             style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: "Search products...",
               hintStyle: TextStyle(color: const Color(0x91FCF8E8)),
@@ -669,7 +976,8 @@ Widget _buildImageItem(Widget imageWidget, String label) {
                     BorderSide(color: const Color(0xFFFCF8E8), width: 2),
                 borderRadius: BorderRadius.circular(10),
               ),
-               prefixIcon: Icon(Icons.search, color: Colors.white54, size: 20.sp),
+              prefixIcon:
+                  Icon(Icons.search, color: Colors.white54, size: 20.sp),
             ),
           ),
         ),
@@ -677,111 +985,118 @@ Widget _buildImageItem(Widget imageWidget, String label) {
     );
   }
 
-Widget _buildCategorizedProductList() {
-  return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
-    builder: (context, categoryState) {
-      if (categoryState is GetAllCategoriesLoading) {
-        return const Center(child: CircularProgressIndicator());
-      }
+  Widget _buildCategorizedProductList() {
+    return BlocBuilder<GetAllCategoriesBloc, GetAllCategoriesState>(
+      builder: (context, categoryState) {
+        if (categoryState is GetAllCategoriesLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      if (categoryState is GetAllCategoriesError) {
-        return const Center(
-          child: Text(
-            'Failed to load categories',
-            style: TextStyle(color: Colors.white),
-          ),
-        );
-      }
+        if (categoryState is GetAllCategoriesError) {
+          return const Center(
+            child: Text(
+              'Failed to load categories',
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        }
 
-      if (categoryState is GetAllCategoriesLoaded) {
-        final categories = categoryState.categories;
+        if (categoryState is GetAllCategoriesLoaded) {
+          final categories = categoryState.categories;
 
-        return BlocBuilder<GetAllProductBloc, GetAllProductState>(
-          builder: (context, productState) {
-            if (productState is GetAllProductLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          return BlocBuilder<GetAllProductBloc, GetAllProductState>(
+            builder: (context, productState) {
+              if (productState is GetAllProductLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            if (productState is GetAllProductError) {
-              return const Center(
-                child: Text(
-                  'Failed to load products',
-                  style: TextStyle(color: Colors.white),
-                ),
-              );
-            }
+              if (productState is GetAllProductError) {
+                return const Center(
+                  child: Text(
+                    'Failed to load products',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                );
+              }
 
-            if (productState is GetAllProductLoaded) {
-              final allProducts = productState.getAllProduct.data ?? [];
+              if (productState is GetAllProductLoaded) {
+                final allProducts = productState.getAllProduct.data ?? [];
 
-              return ListView.builder(
-                padding: EdgeInsets.only(bottom: 16.h),
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final category = categories[index];
+                return ListView.builder(
+                  padding: EdgeInsets.only(bottom: 16.h),
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
 
-                  final categoryProducts = allProducts.where((p) {
-                    if (p.category?.id != category.id) return false;
+                    final categoryProducts = allProducts.where((p) {
+                      if (p.category?.id != category.id) return false;
 
-                    if (_searchQuery.isEmpty) return true;
+                      if (_searchQuery.isEmpty) return true;
 
-                    final matchesName =
-                        (p.name?.toLowerCase() ?? '').contains(_searchQuery);
-                    final matchesCategory =
-                        (category.name?.toLowerCase() ?? '')
-                            .contains(_searchQuery);
+                      final matchesName =
+                          (p.name?.toLowerCase() ?? '').contains(_searchQuery);
+                      final matchesSubName = (p.subName?.toLowerCase() ?? '')
+                          .contains(_searchQuery);
+                      final matchesCategory =
+                          (category.name?.toLowerCase() ?? '')
+                              .contains(_searchQuery);
 
-                    return matchesName || matchesCategory;
-                  }).toList();
+                      return matchesName || matchesSubName || matchesCategory;
+                    }).toList();
 
-                  if (categoryProducts.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+                    if (categoryProducts.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.h),
-                        child: _buildSectionTitle(
-                          category.name ?? 'Unnamed Category',
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.h),
+                          child: _buildSectionTitle(
+                            category.name ?? 'Unnamed Category',
+                          ),
                         ),
-                      ),
 
-                      /// 👇 GridView for products
-                     GridView.builder(
-  shrinkWrap: true,
-  physics: const NeverScrollableScrollPhysics(),
-  itemCount: categoryProducts.length,
-  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-    crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-    crossAxisSpacing: 12.w,
-    mainAxisSpacing: 12.h,
-    childAspectRatio: 0.65,
-  ),
-  itemBuilder: (context, i) {
-    final product = categoryProducts[i];
-    return _ProductCard(
-      product: product,
-      onEdit: () => _showEditProductDialog(context, product),
+                        /// 👇 GridView for products
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: categoryProducts.length,
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount:
+                                MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                            crossAxisSpacing: 12.w,
+                            mainAxisSpacing: 12.h,
+                            childAspectRatio: 0.65,
+                          ),
+                          itemBuilder: (context, i) {
+                            final product = categoryProducts[i];
+                            return _ProductCard(
+                              product: product,
+                              onEdit: () =>
+                                  _showEditProductDialog(context, product),
+                              onDelete: () =>
+                                  _showDeleteConfirmationDialog(context, product),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
     );
-  },
-),
-                    ],
-                  );
-                },
-              );
-            }
-
-            return const SizedBox.shrink();
-          },
-        );
-      }
-
-      return const SizedBox.shrink();
-    },
-  );
-}
+  }
 //   Widget _buildProductList(List<Data> products) {
 //     final isTablet = MediaQuery.of(context).size.width > 600;
 //     final height = isTablet ? 280.0 : _AppConstants.cardHeight.h;
@@ -808,8 +1123,9 @@ Widget _buildCategorizedProductList() {
 class _ProductCard extends StatelessWidget {
   final Data product; // Use the actual model
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _ProductCard({required this.product, required this.onEdit});
+  const _ProductCard({required this.product, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -855,12 +1171,14 @@ class _ProductCard extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10.r), // Use imageUrl
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.image_not_supported),
-                    ),
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.image_not_supported),
+                          )
+                        : const Icon(Icons.image_not_supported),
                   ),
                 ),
                 Positioned(
@@ -906,12 +1224,13 @@ class _ProductCard extends StatelessWidget {
                 IconButton(
                   icon: SvgPicture.asset(
                     'assets/product note.svg',
-                    color: _AppConstants.buttonColor,
+                    colorFilter: const ColorFilter.mode(_AppConstants.buttonColor, BlendMode.srcIn), // Fixed deprecated color parameter
                     width: 16.w,
                     semanticsLabel: 'Edit product icon',
                   ),
                   onPressed: onEdit,
                 ),
+              
               ],
             ),
           ),
@@ -954,18 +1273,30 @@ class _ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 0.h),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 12.w),
-            child: Text(
-              discountPercentage > 0
-                  ? '${discountPercentage.toStringAsFixed(0)}% OFF'
-                  : '',
-              style: TextStyle(
-                color: _AppConstants.accentColor,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  discountPercentage > 0
+                      ? '${discountPercentage.toStringAsFixed(0)}% OFF'
+                      : '',
+                  style: TextStyle(
+                    color: _AppConstants.accentColor,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                  IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                    size: 20.w,
+                  ),
+                  onPressed: onDelete,
+                ),
+              ],
             ),
           ),
           SizedBox(height: 12.h),

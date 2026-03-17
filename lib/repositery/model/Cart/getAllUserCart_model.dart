@@ -26,32 +26,20 @@ class GetAllUserCartModel {
         }
         return _data;
     }
-
-    GetAllUserCartModel copyWith({
-        bool? success,
-        Data? data,
-    }) => GetAllUserCartModel(
-        success: success ?? this.success,
-        data: data ?? this.data,
-    );
 }
 
 class Data {
-    int? totalCartLength;
-    double? totalCartAmount;
-    List<AllCartItems>? allCartItems;
+    List<Items>? items;
+    double? totalAmount;
 
-    Data({this.totalCartLength, this.totalCartAmount, this.allCartItems});
+    Data({this.items, this.totalAmount});
 
     Data.fromJson(Map<String, dynamic> json) {
-        if(json["totalCartLength"] is num) {
-            totalCartLength = (json["totalCartLength"] as num).toInt();
+        if(json["items"] is List) {
+            items = json["items"] == null ? null : (json["items"] as List).map((e) => Items.fromJson(e)).toList();
         }
-        if(json["totalCartAmount"] is num) {
-            totalCartAmount = (json["totalCartAmount"] as num).toDouble();
-        }
-        if(json["AllCartItems"] is List) {
-            allCartItems = json["AllCartItems"] == null ? null : (json["AllCartItems"] as List).map((e) => AllCartItems.fromJson(e)).toList();
+        if(json["totalAmount"] is num) {
+            totalAmount = (json["totalAmount"] as num).toDouble();
         }
     }
 
@@ -61,91 +49,106 @@ class Data {
 
     Map<String, dynamic> toJson() {
         final Map<String, dynamic> _data = <String, dynamic>{};
-        _data["totalCartLength"] = totalCartLength;
-        _data["totalCartAmount"] = totalCartAmount;
-        if(allCartItems != null) {
-            _data["AllCartItems"] = allCartItems?.map((e) => e.toJson()).toList();
+        if(items != null) {
+            _data["items"] = items?.map((e) => e.toJson()).toList();
         }
+        _data["totalAmount"] = totalAmount;
         return _data;
     }
-
-    Data copyWith({
-        int? totalCartLength,
-        double? totalCartAmount,
-        List<AllCartItems>? allCartItems,
-    }) => Data(
-        totalCartLength: totalCartLength ?? this.totalCartLength,
-        totalCartAmount: totalCartAmount ?? this.totalCartAmount,
-        allCartItems: allCartItems ?? this.allCartItems,
-    );
 }
 
-class AllCartItems {
+class Items {
     String? id;
-    int? quantity;
+    String? userId;
+    String? productId;
+    double? quantity;
     String? unit;
-    double? totalAmount;
+    String? createdAt;
+    String? updatedAt;
+    int? v;
     Product? product;
+    double? discountedUnitPrice;
+    double? itemAmount;
 
-    AllCartItems({this.id, this.quantity, this.unit, this.totalAmount, this.product});
+    Items({this.id, this.userId, this.productId, this.quantity, this.unit, this.createdAt, this.updatedAt, this.v, this.product, this.discountedUnitPrice, this.itemAmount});
 
-    AllCartItems.fromJson(Map<String, dynamic> json) {
+    Items.fromJson(Map<String, dynamic> json) {
         if(json["_id"] is String) {
             id = json["_id"];
         }
+        if(json["userId"] is String) {
+            userId = json["userId"];
+        }
+        if(json["productId"] is String) {
+            productId = json["productId"];
+        }
         if(json["quantity"] is num) {
-            quantity = (json["quantity"] as num).toInt();
+            quantity = (json["quantity"] as num).toDouble();
         }
         if(json["unit"] is String) {
             unit = json["unit"];
         }
-        if(json["totalAmount"] is num) {
-            totalAmount = (json["totalAmount"] as num).toDouble();
+        if(json["createdAt"] is String) {
+            createdAt = json["createdAt"];
+        }
+        if(json["updatedAt"] is String) {
+            updatedAt = json["updatedAt"];
+        }
+        if(json["__v"] is num) {
+            v = (json["__v"] as num).toInt();
         }
         if(json["product"] is Map) {
             product = json["product"] == null ? null : Product.fromJson(json["product"]);
         }
+        if(json["discountedUnitPrice"] is num) {
+            discountedUnitPrice = (json["discountedUnitPrice"] as num).toDouble();
+        }
+        if(json["itemAmount"] is num) {
+            itemAmount = (json["itemAmount"] as num).toDouble();
+        }
     }
 
-    static List<AllCartItems> fromList(List<Map<String, dynamic>> list) {
-        return list.map(AllCartItems.fromJson).toList();
+    static List<Items> fromList(List<Map<String, dynamic>> list) {
+        return list.map(Items.fromJson).toList();
     }
 
     Map<String, dynamic> toJson() {
         final Map<String, dynamic> _data = <String, dynamic>{};
         _data["_id"] = id;
+        _data["userId"] = userId;
+        _data["productId"] = productId;
         _data["quantity"] = quantity;
         _data["unit"] = unit;
-        _data["totalAmount"] = totalAmount;
+        _data["createdAt"] = createdAt;
+        _data["updatedAt"] = updatedAt;
+        _data["__v"] = v;
         if(product != null) {
             _data["product"] = product?.toJson();
         }
+        _data["discountedUnitPrice"] = discountedUnitPrice;
+        _data["itemAmount"] = itemAmount;
         return _data;
     }
-
-    AllCartItems copyWith({
-        String? id,
-        int? quantity,
-        String? unit,
-        double? totalAmount,
-        Product? product,
-    }) => AllCartItems(
-        id: id ?? this.id,
-        quantity: quantity ?? this.quantity,
-        unit: unit ?? this.unit,
-        totalAmount: totalAmount ?? this.totalAmount,
-        product: product ?? this.product,
-    );
 }
 
 class Product {
     String? id;
     String? name;
+    String? description;
+    String? subName;
+    String? details;
     List<String>? images;
+    String? category;
     int? basePrice;
-    int? availableStock;
+    int? discountPercentage;
+    String? unit;
+    List<double>? selectableQuantities;
+    String? slug;
+    String? createdAt;
+    String? updatedAt;
+    int? v;
 
-    Product({this.id, this.name, this.images, this.basePrice, this.availableStock});
+    Product({this.id, this.name, this.description, this.subName, this.details, this.images, this.category, this.basePrice, this.discountPercentage, this.unit, this.selectableQuantities, this.slug, this.createdAt, this.updatedAt, this.v});
 
     Product.fromJson(Map<String, dynamic> json) {
         if(json["_id"] is String) {
@@ -154,14 +157,44 @@ class Product {
         if(json["name"] is String) {
             name = json["name"];
         }
+        if(json["description"] is String) {
+            description = json["description"];
+        }
+        if(json["subName"] is String) {
+            subName = json["subName"];
+        }
+        if(json["details"] is String) {
+            details = json["details"];
+        }
         if(json["images"] is List) {
             images = json["images"] == null ? null : List<String>.from(json["images"]);
+        }
+        if(json["category"] is String) {
+            category = json["category"];
         }
         if(json["basePrice"] is num) {
             basePrice = (json["basePrice"] as num).toInt();
         }
-        if(json["availableStock"] is num) {
-            availableStock = (json["availableStock"] as num).toInt();
+        if(json["discountPercentage"] is num) {
+            discountPercentage = (json["discountPercentage"] as num).toInt();
+        }
+        if(json["unit"] is String) {
+            unit = json["unit"];
+        }
+        if(json["selectableQuantities"] is List) {
+            selectableQuantities = json["selectableQuantities"] == null ? null : (json["selectableQuantities"] as List).map((e) => (e as num).toDouble()).toList();
+        }
+        if(json["slug"] is String) {
+            slug = json["slug"];
+        }
+        if(json["createdAt"] is String) {
+            createdAt = json["createdAt"];
+        }
+        if(json["updatedAt"] is String) {
+            updatedAt = json["updatedAt"];
+        }
+        if(json["__v"] is num) {
+            v = (json["__v"] as num).toInt();
         }
     }
 
@@ -173,25 +206,23 @@ class Product {
         final Map<String, dynamic> _data = <String, dynamic>{};
         _data["_id"] = id;
         _data["name"] = name;
+        _data["description"] = description;
+        _data["subName"] = subName;
+        _data["details"] = details;
         if(images != null) {
             _data["images"] = images;
         }
+        _data["category"] = category;
         _data["basePrice"] = basePrice;
-        _data["availableStock"] = availableStock;
+        _data["discountPercentage"] = discountPercentage;
+        _data["unit"] = unit;
+        if(selectableQuantities != null) {
+            _data["selectableQuantities"] = selectableQuantities;
+        }
+        _data["slug"] = slug;
+        _data["createdAt"] = createdAt;
+        _data["updatedAt"] = updatedAt;
+        _data["__v"] = v;
         return _data;
     }
-
-    Product copyWith({
-        String? id,
-        String? name,
-        List<String>? images,
-        int? basePrice,
-        int? availableStock,
-    }) => Product(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        images: images ?? this.images,
-        basePrice: basePrice ?? this.basePrice,
-        availableStock: availableStock ?? this.availableStock,
-    );
 }

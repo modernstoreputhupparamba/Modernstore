@@ -95,7 +95,7 @@ class _MyOrdersPageState extends State<MyOrdersPage>
             ),
           );
         } else if (state is GetUserOrderLoaded) {
-          var orders = state.getUserOrderModel.orders!.reversed.toList() ?? [];
+          var orders = state.getUserOrderModel.orders! ?? [];
 
           // Filter logic
           if (filterStatus == "Delivered") {

@@ -16,13 +16,16 @@ class CreateProductBloc extends Bloc<CreateProductEvent, CreateProductState> {
       try {
         final model = await createProductApi.uploadProduct(
             productName: event.productName,
+            productSubName:event.productSubName,
             productDescription: event.productDescription,
             price: event.price,
             imageFile: event.imageFile,
             categoryId: event.categoryId,
             discountPercentage: event.discountPercentage,
             productDetails: event.productDescription,
-            unit: event.unit);
+            unit: event.unit,
+            selectableQuantities: event.selectableQuantities
+            );
         emit(CreateProductLoaded(createProduct: CreateProductModel()));
       } catch (e) {
         emit(CreateProductError(message: e.toString()));

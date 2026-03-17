@@ -30,12 +30,12 @@ class AddCartApi {
   /// 🔹 OLD NAME expected by ApiClient / generator
   /// This keeps the framework happy and simply forwards to the real method.
   Future<AddToCartResponse> getAddCartModel(
-      String productId, int quantity) {
+      String productId, num quantity) {
     return addToCart(productId, quantity);
   }
 
   /// 🔹 Your real implementation
-  Future<AddToCartResponse> addToCart(String productId, int quantity) async {
+  Future<AddToCartResponse> addToCart(String productId, num quantity) async {
     const String path = '/cart/user/addToCart';
 
     if (productId.isEmpty || productId.length != 24) {

@@ -26,7 +26,7 @@ class ProductDetails extends StatefulWidget {
 }
 
 class _ProductDetailsState extends State<ProductDetails> {
-  final ValueNotifier<int> _quantityNotifier = ValueNotifier(1);
+  final ValueNotifier<num> _quantityNotifier = ValueNotifier(1);
   double _rating = 4.0;
 
   @override
@@ -97,6 +97,12 @@ class _ProductDetailsState extends State<ProductDetails> {
                           FetchAllProductByCategoryId(categoryId: categoryId),
                         );
                   }
+                  final quantities =
+                      state.getByIdProduct.data?.selectableQuantities;
+                  if (quantities != null && quantities.isNotEmpty) {
+                    // Set initial quantity from the list of selectable quantities
+                    _quantityNotifier.value = quantities.first;
+                  }
                 }
               },
             ),
@@ -136,6 +142,10 @@ class _ProductDetailsState extends State<ProductDetails> {
                     discount > 0 ? basePrice * (1 - discount / 100) : basePrice;
 
                 final bool hasDiscount = discount > 0;
+                final selectableQuantities = product.data?.selectableQuantities;
+                final bool hasSelectableQuantities =
+                    selectableQuantities != null &&
+                        selectableQuantities.isNotEmpty;
 
                 // Check for stock. Assumes a 'stock' field on product.data
                 final bool isOutOfStock =
@@ -199,17 +209,19 @@ class _ProductDetailsState extends State<ProductDetails> {
                           ),
                           actions: [
                             Padding(
-                              padding: EdgeInsets.only(right: 16.w),
-                              child: IconButton(onPressed: () {
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          NavigationBarWidget(initialIndex: 3)),
-                                  (route) => false,
-                                );
-                              }, icon: Icon(Icons.shopping_cart_outlined))
-                            ),
+                                padding: EdgeInsets.only(right: 16.w),
+                                child: IconButton(
+                                    onPressed: () {
+                                      Navigator.pushAndRemoveUntil(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                NavigationBarWidget(
+                                                    initialIndex: 3)),
+                                        (route) => false,
+                                      );
+                                    },
+                                    icon: Icon(Icons.shopping_cart_outlined))),
                           ],
                         ),
                         body: SingleChildScrollView(
@@ -217,7 +229,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // 🔥 HEADER IMAGE WITH DOT INDICATOR
-                              _ProductImageSlider(images: product.data!.images ?? []),
+                              _ProductImageSlider(
+                                  images: product.data!.images ?? []),
 
                               // --- Product info ---
                               Padding(
@@ -245,23 +258,39 @@ class _ProductDetailsState extends State<ProductDetails> {
                                             ),
                                           ),
                                         ),
-                                        BlocSelector<GetbyidBloc, GetbyidState, bool>(
-                                          selector: (state) => state is GetbyidLoaded
-                                              ? state.getByIdProduct.data?.inWishlist ?? false
-                                              : false,
+                                        BlocSelector<GetbyidBloc, GetbyidState,
+                                            bool>(
+                                          selector: (state) =>
+                                              state is GetbyidLoaded
+                                                  ? state.getByIdProduct.data
+                                                          ?.inWishlist ??
+                                                      false
+                                                  : false,
                                           builder: (context, isFav) {
                                             return IconButton(
                                               icon: Icon(
-                                                isFav ? Icons.favorite : Icons.favorite_outline,
-                                                color: isFav ? Colors.red : appColor.loadingColor,
+                                                isFav
+                                                    ? Icons.favorite
+                                                    : Icons.favorite_outline,
+                                                color: isFav
+                                                    ? Colors.red
+                                                    : appColor.loadingColor,
                                                 size: 24.sp,
                                               ),
                                               onPressed: () {
                                                 isFav
-                                                    ? context.read<RemovetowishlistBloc>().add(
-                                                        fetchRemovetowishlistEvent(widget.productId))
-                                                    : context.read<AddToWishlistBloc>().add(
-                                                        fetchAddToWishlistEvent(widget.productId));
+                                                    ? context
+                                                        .read<
+                                                            RemovetowishlistBloc>()
+                                                        .add(
+                                                            fetchRemovetowishlistEvent(
+                                                                widget
+                                                                    .productId))
+                                                    : context
+                                                        .read<
+                                                            AddToWishlistBloc>()
+                                                        .add(fetchAddToWishlistEvent(
+                                                            widget.productId));
                                               },
                                             );
                                           },
@@ -317,7 +346,14 @@ class _ProductDetailsState extends State<ProductDetails> {
                                               ),
                                           ],
                                         ),
-                                        _QuantitySelector(quantityNotifier: _quantityNotifier),
+                                        if (hasSelectableQuantities)
+                                          _buildQuantityDropdown(
+                                              selectableQuantities!,
+                                              product.data!.unit)
+                                        else
+                                          _QuantitySelector(
+                                              quantityNotifier:
+                                                  _quantityNotifier),
                                       ],
                                     ),
                                     SizedBox(height: 24.h),
@@ -468,10 +504,12 @@ class _ProductDetailsState extends State<ProductDetails> {
         SizedBox(height: 16.h),
         SizedBox(
           height: 260.h,
-          child: BlocBuilder<GetAllProductByCategoryIdBloc, GetAllProductByCategoryIdState>(
+          child: BlocBuilder<GetAllProductByCategoryIdBloc,
+              GetAllProductByCategoryIdState>(
             builder: (context, state) {
               if (state is GetAllProductByCategoryIdLoading) {
-                return const Center(child: CircularProgressIndicator(color: Color(0xFFF5E9B5)));
+                return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFF5E9B5)));
               }
               if (state is GetAllProductByCategoryIdLoaded) {
                 final products = state.products.data ?? [];
@@ -688,6 +726,47 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
+  Widget _buildQuantityDropdown(List<double> quantities, String? unit) {
+    return ValueListenableBuilder<num>(
+      valueListenable: _quantityNotifier,
+      builder: (context, selectedQuantity, child) {
+        final doubleValue = selectedQuantity.toDouble();
+        // Ensure the dropdown value exactly matches one of the available options to prevent assertion errors
+        final actualValue = quantities.contains(doubleValue) ? doubleValue : quantities.first;
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          child: DropdownButton<double>(
+            value: actualValue,
+            items: quantities.map((quantity) {
+              return DropdownMenuItem<double>(
+                value: quantity,
+                child: Text(
+                  '$quantity ${unit?.toLowerCase() ?? ''}',
+                  style: GoogleFonts.poppins(color: Colors.white),
+                ),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              if (newValue != null) {
+                _quantityNotifier.value = newValue;
+              }
+            },
+            dropdownColor: Colors.grey[900],
+            style: GoogleFonts.poppins(color: Colors.white),
+            underline: const SizedBox(),
+            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+            // isExpanded: true,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _discountBadge(double discount) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
@@ -791,7 +870,8 @@ class _ProductImageSliderState extends State<_ProductImageSlider> {
                       width: _currentPage == index ? 10.w : 6.w,
                       height: _currentPage == index ? 10.w : 6.w,
                       decoration: BoxDecoration(
-                        color: _currentPage == index ? Colors.black : Colors.grey,
+                        color:
+                            _currentPage == index ? Colors.black : Colors.grey,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -806,12 +886,12 @@ class _ProductImageSliderState extends State<_ProductImageSlider> {
 }
 
 class _QuantitySelector extends StatelessWidget {
-  final ValueNotifier<int> quantityNotifier;
+  final ValueNotifier<num> quantityNotifier;
   const _QuantitySelector({required this.quantityNotifier});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
+    return ValueListenableBuilder<num>(
       valueListenable: quantityNotifier,
       builder: (context, count, child) {
         return Row(
@@ -869,7 +949,7 @@ class _QuantitySelector extends StatelessWidget {
 class _AddToCartButton extends StatelessWidget {
   final bool isOutOfStock;
   final String productId;
-  final ValueNotifier<int> quantityNotifier;
+  final ValueNotifier<num> quantityNotifier;
 
   const _AddToCartButton({
     required this.isOutOfStock,
@@ -879,7 +959,8 @@ class _AddToCartButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lang = Provider.of<LanguageService>(context, listen: false).currentLanguage;
+    final lang =
+        Provider.of<LanguageService>(context, listen: false).currentLanguage;
     return BlocBuilder<AddCartBloc, AddCartState>(
       builder: (context, cartState) {
         final isCartLoading = cartState is AddCartLoading;
@@ -898,7 +979,8 @@ class _AddToCartButton extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 80.w, vertical: 16.h),
               decoration: BoxDecoration(
-                color: isOutOfStock ? Colors.grey.shade700 : appColor.primaryText,
+                color:
+                    isOutOfStock ? Colors.grey.shade700 : appColor.primaryText,
                 borderRadius: BorderRadius.circular(40.r),
               ),
               child: isCartLoading
@@ -911,7 +993,9 @@ class _AddToCartButton extends StatelessWidget {
                       ),
                     )
                   : Text(
-                      isOutOfStock ? "Out of Stock" : AppLocalizations.getString('add_to_cart', lang),
+                      isOutOfStock
+                          ? "Out of Stock"
+                          : AppLocalizations.getString('add_to_cart', lang),
                       style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: isOutOfStock ? Colors.white54 : Colors.black,

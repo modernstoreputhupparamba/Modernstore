@@ -173,7 +173,7 @@ class _OrderHistoryState extends State<OrderHistory> {
         }
 
         if (state is GetAllOrdersLoaded) {
-          var orders = state.getAllOrdersModel.orders?.reversed.toList() ?? [];
+          var orders = state.getAllOrdersModel.orders ?? [];
 
           if (_selectedFilter != 'All') {
             orders = orders.where((order) {
@@ -236,8 +236,7 @@ class _OrderHistoryState extends State<OrderHistory> {
                                 ),
                               ),
                               Text(
-                                order.createdAt?.toString().substring(0, 16) ??
-                                    '',
+                                _formatDate(order.createdAt),
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 14.sp,
@@ -339,8 +338,7 @@ class _OrderHistoryState extends State<OrderHistory> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Invoice #: ${order.id?.substring(0, 8) ?? 'N/A'}'),
-                  pw.Text(
-                      'Date: ${order.createdAt?.toString().substring(0, 10) ?? ''}'),
+                  pw.Text('Date: ${_formatDate(order.createdAt)}'),
                 ],
               ),
               pw.SizedBox(height: 10),
@@ -432,5 +430,15 @@ class _OrderHistoryState extends State<OrderHistory> {
       return parts.isNotEmpty ? parts.join(', ') : 'N/A';
     }
     return 'N/A';
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return "";
+    try {
+      final date = DateTime.parse(dateStr).toLocal();
+      return "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+    } catch (e) {
+      return dateStr.length > 16 ? dateStr.substring(0, 16) : dateStr;
+    }
   }
 }

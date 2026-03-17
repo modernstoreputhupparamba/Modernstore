@@ -32,13 +32,14 @@ class Data {
     String? id;
     String? name;
     String? description;
+    String? subName;
     String? details;
     List<String>? images;
     Category? category;
     int? basePrice;
     int? discountPercentage;
     String? unit;
-    String? sku;
+    List<double>? selectableQuantities;
     String? slug;
     String? createdAt;
     String? updatedAt;
@@ -46,7 +47,7 @@ class Data {
     bool? inWishlist;
     int? quantityInStock;
 
-    Data({this.id, this.name, this.description, this.details, this.images, this.category, this.basePrice, this.discountPercentage, this.unit, this.sku, this.slug, this.createdAt, this.updatedAt, this.v, this.inWishlist, this.quantityInStock});
+    Data({this.id, this.name, this.description, this.subName, this.details, this.images, this.category, this.basePrice, this.discountPercentage, this.unit, this.selectableQuantities, this.slug, this.createdAt, this.updatedAt, this.v, this.inWishlist, this.quantityInStock});
 
     Data.fromJson(Map<String, dynamic> json) {
         if(json["_id"] is String) {
@@ -57,6 +58,9 @@ class Data {
         }
         if(json["description"] is String) {
             description = json["description"];
+        }
+        if(json["subName"] is String) {
+            subName = json["subName"];
         }
         if(json["details"] is String) {
             details = json["details"];
@@ -76,8 +80,8 @@ class Data {
         if(json["unit"] is String) {
             unit = json["unit"];
         }
-        if(json["sku"] is String) {
-            sku = json["sku"];
+        if(json["selectableQuantities"] is List) {
+            selectableQuantities = json["selectableQuantities"] == null ? null : (json["selectableQuantities"] as List).map((e) => (e as num).toDouble()).toList();
         }
         if(json["slug"] is String) {
             slug = json["slug"];
@@ -108,6 +112,7 @@ class Data {
         _data["_id"] = id;
         _data["name"] = name;
         _data["description"] = description;
+        _data["subName"] = subName;
         _data["details"] = details;
         if(images != null) {
             _data["images"] = images;
@@ -118,7 +123,9 @@ class Data {
         _data["basePrice"] = basePrice;
         _data["discountPercentage"] = discountPercentage;
         _data["unit"] = unit;
-        _data["sku"] = sku;
+        if(selectableQuantities != null) {
+            _data["selectableQuantities"] = selectableQuantities;
+        }
         _data["slug"] = slug;
         _data["createdAt"] = createdAt;
         _data["updatedAt"] = updatedAt;

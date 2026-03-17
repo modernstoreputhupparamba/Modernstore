@@ -117,8 +117,8 @@ class _CartPageState extends State<CartPage> {
                   final cartModel =
                       context.read<GetAllUserCartBloc>().getAllUserCartModel;
 
-                  final List<AllCartItems> cartItems =
-                      cartModel.data?.allCartItems ?? [];
+                  final List<Items> cartItems =
+                      cartModel?.data?.items ?? [];
 
                   // ✅ EMPTY CART UI
                   if (cartItems.isEmpty) {
@@ -182,7 +182,7 @@ class _CartPageState extends State<CartPage> {
                           Column(
                             children: cartItems.map((item) {
                               return FavouriteItemCard(
-                                productId: item.product?.id ?? '',
+                                productId: item.productId ?? '',
                                 item: {
                                   'name': item.product?.name ?? 'No Name',
                                   'image': (item.product?.images?.isNotEmpty ??
@@ -190,8 +190,8 @@ class _CartPageState extends State<CartPage> {
                                       ? item.product!.images!.first
                                       : null,
                                   'quantity': item.quantity ?? 1,
-                                  'price': item.totalAmount ?? 0,
-                                  'mrp': item.totalAmount ?? 0,
+                                  'price': item.itemAmount ?? 0,
+                                  'mrp': item.product?.basePrice ?? 0,
                                 },
                                 languageService: languageService,
                               );
@@ -323,28 +323,47 @@ class _CartPageState extends State<CartPage> {
           SizedBox(height: 30.h),
           BlocBuilder<GetAllUserCartBloc, GetAllUserCartState>(
             builder: (context, state) {
-              num totalPrice = 0.0; // ✅ FIX: Initialize as a double
+              num totalPrice = 0.0;
+              num totalDiscount = 0.0;
+              num totalMrp = 0.0;
+              num deliveryCharge = 20.0; // Changed to num for reassignment
+
+
+
               if (state is GetAllUserCartLoaded) {
                 final cartModel =
                     context.read<GetAllUserCartBloc>().getAllUserCartModel;
-                if (cartModel != null &&
-                    cartModel.data != null &&
-                    cartModel.data?.allCartItems != null) {
-                  totalPrice = cartModel.data?.totalCartAmount ?? 0.0;
+                if (cartModel?.data?.items != null &&
+                    cartModel!.data!.items!.isNotEmpty) {
+                  totalPrice = cartModel.data?.totalAmount ?? 0.0;
+
+                  for (final item in cartModel.data!.items!) {
+                    final basePrice = item.product?.basePrice?.toDouble() ?? 0.0;
+                    final quantity = item.quantity ?? 0.0;
+                    final discountedUnitPrice = item.discountedUnitPrice ?? 0.0;
+
+                    totalMrp += basePrice * quantity;
+                    totalDiscount += (basePrice - discountedUnitPrice) * quantity;
+                  }
+
+                  if ((totalPrice + deliveryCharge) > 250) {
+                    deliveryCharge = 0.0;
+                  }
                 }
               }
               return Column(
                 children: [
                   _buildPriceRow(languageService.getString('price'),
-                      '₹${totalPrice?.toStringAsFixed(2)}', languageService),
-                  _buildPriceRow(languageService.getString('discount'), '₹5.00',
+                      '₹${totalMrp.toStringAsFixed(2)}', languageService),
+                  _buildPriceRow(languageService.getString('discount'),
+                      '₹${totalDiscount.toStringAsFixed(2)}',
                       languageService),
                   _buildPriceRow(languageService.getString('delivery_charge'),
-                      '₹20.00', languageService),
+                      '₹${deliveryCharge.toStringAsFixed(2)}', languageService),
                   Divider(color: Colors.white70, thickness: 1.h),
                   _buildPriceRow(
                       languageService.getString('grand_total'),
-                      '₹${(totalPrice + 15).toStringAsFixed(2)}',
+                      '₹${(totalPrice + deliveryCharge).toStringAsFixed(2)}',
                       languageService,
                       isBold: true),
                 ],
@@ -491,12 +510,12 @@ class FavouriteItemCard extends StatefulWidget {
 }
 
 class _FavouriteItemCardState extends State<FavouriteItemCard> {
-  late int count;
+  late num count;
 
   @override
   void initState() {
     super.initState();
-    count = (widget.item['quantity'] as int?) ?? 1;
+    count = (widget.item['quantity'] as num?) ?? 1;
   }
 
   void _updateQuantity(BuildContext context, String? type, String productId) {

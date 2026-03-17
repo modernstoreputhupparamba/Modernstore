@@ -516,13 +516,13 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     StatCard(
                       label: 'New Orders',
-                      value: data?.newOrders?.toString() ?? '0',
+                      value: data?.orderStats!.newOrders?.toString() ?? '0',
                       icon: Icons.receipt_long,
                       position: CrossAxisAlignment.start,
                     ),
                     StatCard(
                       label: 'Out for Delivery',
-                      value: data?.shippedOrders?.toString() ?? '0',
+                      value: data?.orderStats!.outForDelivery?.toString() ?? '0',
                       icon: Icons.local_shipping,
                       position: CrossAxisAlignment.end,
                     ),
@@ -536,13 +536,13 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     StatCard(
                       label: 'Delivered',
-                      value: data?.deliveredOrders?.toString() ?? '0',
+                      value: data?.orderStats!.delivered?.toString() ?? '0',
                       icon: Icons.delivery_dining,
                       position: CrossAxisAlignment.start,
                     ),
                     StatCard(
                       label: 'Cancelled',
-                      value: data?.canceledOrders?.toString() ?? '0',
+                      value: data?.orderStats!.cancelled?.toString() ?? '0',
                       icon: Icons.cancel,
                       position: CrossAxisAlignment.end,
                     ),
@@ -572,152 +572,169 @@ class _DashboardState extends State<Dashboard> {
 
   // --- UNCHANGED ---
   Widget _buildTopCategoriesChart() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Top Categories',
-          style: GoogleFonts.poppins(color: Colors.white, fontSize: 18.sp),
-        ),
-        SizedBox(height: 10.h),
-        SizedBox(
-          height: 200.h,
-          child: PieChart(PieChartData(sections: _getPieChartData())),
-        ),
-      ],
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        List<PieChartSectionData> sections = [];
+        if (state is DashboardLoaded) {
+          final topCategories = state.dashboardModel.data?.topCategories ?? [];
+          final colors = [
+            Colors.green,
+            Colors.orange,
+            Colors.red,
+            Colors.blue,
+            Colors.purple,
+            Colors.cyan
+          ];
+
+          for (int i = 0; i < topCategories.length; i++) {
+            final category = topCategories[i];
+            sections.add(
+              PieChartSectionData(
+                value: (category.percentage ?? 0).toDouble(),
+                title: category.name ?? '',
+                color: colors[i % colors.length],
+                radius: 60.r,
+                titleStyle: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold),
+              ),
+            );
+          }
+        }
+
+        if (sections.isEmpty) {
+          sections = [
+            PieChartSectionData(
+                value: 100, title: 'No Data', color: Colors.grey, radius: 60.r)
+          ];
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Top Categories',
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 18.sp),
+            ),
+            SizedBox(height: 10.h),
+            SizedBox(
+              height: 200.h,
+              child: PieChart(PieChartData(sections: sections)),
+            ),
+          ],
+        );
+      },
     );
   }
 
   // --- UNCHANGED ---
   Widget _buildMonthlyOrdersChart() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Orders Monthly',
-          style: GoogleFonts.poppins(color: Colors.white, fontSize: 18.sp),
-        ),
-        SizedBox(height: 10.h),
-        SizedBox(
-          height: 200.h,
-          child: BarChart(
-            BarChartData(
-              barGroups: _getBarChartData(),
-              borderData: FlBorderData(show: false),
-              gridData: FlGridData(show: false),
-              titlesData: FlTitlesData(
-                show: true,
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 30.h, // Added reserved size
-                    getTitlesWidget: (value, meta) {
-                      String text = '';
-                      switch (value.toInt()) {
-                        case 0:
-                          text = 'Jan';
-                          break;
-                        case 1:
-                          text = 'Feb';
-                          break;
-                        case 2:
-                          text = 'Mar';
-                          break;
-                        case 3:
-                          text = 'Apr';
-                          break;
-                        // Add more cases as needed
-                      }
-                      return Text(
-                        text,
-                        style: GoogleFonts.poppins(
-                            color: Colors.white, fontSize: 12.sp),
-                      );
-                    },
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40.w, // Added reserved size
-                    getTitlesWidget: (value, meta) {
-                      // Show labels at intervals
-                      if (value % 50 != 0 && value != 0) return Container();
-                      return Text(
-                        value.toInt().toString(),
-                        style: GoogleFonts.poppins(
-                            color: Colors.white, fontSize: 12.sp),
-                      );
-                    },
-                  ),
-                ),
-                rightTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                topTitles:
-                    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-              ),
-              barTouchData: BarTouchData(enabled: false),
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        List<BarChartGroupData> barGroups = [];
+        List<String> months = [];
+        double maxY = 10;
+        
+        if (state is DashboardLoaded) {
+          final monthlyOrders = state.dashboardModel.data?.monthlyOrders ?? [];
+          
+          for (int i = 0; i < monthlyOrders.length; i++) {
+            final order = monthlyOrders[i];
+            months.add(order.month ?? '');
+            final count = (order.count ?? 0).toDouble();
+            if (count > maxY) maxY = count;
+            
+            barGroups.add(
+              BarChartGroupData(x: i, barRods: [
+                BarChartRodData(
+                    toY: count,
+                    color: Colors.white,
+                    width: 16.w,
+                    borderRadius: BorderRadius.circular(4.r))
+              ]),
+            );
+          }
+        }
+
+        // Determine intervals dynamically based on maximum value
+        double interval = (maxY / 4).ceilToDouble();
+        if (interval == 0) interval = 1;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Orders Monthly',
+              style: GoogleFonts.poppins(color: Colors.white, fontSize: 18.sp),
             ),
-          ),
-        ),
-      ],
+            SizedBox(height: 10.h),
+            SizedBox(
+              height: 200.h,
+              child: BarChart(
+                BarChartData(
+                  maxY: maxY + (maxY * 0.2), // Provide 20% breathing room on top
+                  barGroups: barGroups,
+                  borderData: FlBorderData(show: false),
+                  gridData: FlGridData(show: false),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30.h,
+                        getTitlesWidget: (value, meta) {
+                          if (value < 0 || value >= months.length) return const SizedBox();
+                          return Padding(
+                            padding: EdgeInsets.only(top: 8.h),
+                            child: Text(
+                              months[value.toInt()],
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white, fontSize: 12.sp),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40.w,
+                        interval: interval,
+                        getTitlesWidget: (value, meta) {
+                          if (value == 0) return const SizedBox();
+                          return Text(
+                            value.toInt().toString(),
+                            style: GoogleFonts.poppins(
+                                color: Colors.white, fontSize: 12.sp),
+                          );
+                        },
+                      ),
+                    ),
+                    rightTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles:
+                        AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipColor: (group) => Colors.blueGrey,
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        return BarTooltipItem(
+                          '${months[groupIndex]}\n${rod.toY.toInt()} Orders',
+                          GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
-  }
-
-  // --- UNCHANGED ---
-  List<PieChartSectionData> _getPieChartData() {
-    // Consider adding dynamic data and percentages
-    return [
-      PieChartSectionData(
-          value: 50,
-          title: 'Vegetables',
-          color: Colors.green,
-          radius: 60.r), // Added radius
-      PieChartSectionData(
-          value: 25, title: 'Fruits', color: Colors.orange, radius: 60.r),
-      PieChartSectionData(
-          value: 15, title: 'Meats', color: Colors.red, radius: 60.r),
-      PieChartSectionData(
-          value: 10, title: 'Other', color: Colors.blue, radius: 60.r),
-    ];
-  }
-
-  // --- UNCHANGED ---
-  List<BarChartGroupData> _getBarChartData() {
-    // Consider adding dynamic data
-    final double barWidth = 16.w; // Define bar width
-    final BorderRadius borderRadius =
-        BorderRadius.circular(4.r); // Define border radius
-    return [
-      BarChartGroupData(x: 0, barRods: [
-        BarChartRodData(
-            toY: 150,
-            color: Colors.white,
-            width: barWidth,
-            borderRadius: borderRadius)
-      ]),
-      BarChartGroupData(x: 1, barRods: [
-        BarChartRodData(
-            toY: 180,
-            color: Colors.white,
-            width: barWidth,
-            borderRadius: borderRadius)
-      ]),
-      BarChartGroupData(x: 2, barRods: [
-        BarChartRodData(
-            toY: 120,
-            color: Colors.white,
-            width: barWidth,
-            borderRadius: borderRadius)
-      ]),
-      BarChartGroupData(x: 3, barRods: [
-        BarChartRodData(
-            toY: 200,
-            color: Colors.white,
-            width: barWidth,
-            borderRadius: borderRadius)
-      ]),
-    ];
   }
 } // End of _DashboardState
 
