@@ -17,7 +17,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
               print('Bloc  Loading successfully ..............');
 
       try {
-        login = await loginapi.getLogin(phoneNumber: event.phoneNumber!);
+        login = await loginapi.getLogin(phoneNumber: event.phoneNumber!, otp: event.otp!);
 
         emit(loginBlocLoaded(login: login));
         print('Bloc Loaded successfully ..............');

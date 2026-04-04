@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:modern_grocery/bloc/Login_/Send_otp/send_otp_bloc.dart';
 
 import 'package:modern_grocery/bloc/Login_/login/login_bloc.dart';
 
@@ -33,10 +34,10 @@ class _EnterScreenState extends State<EnterScreen> {
   }
 
   void _handleLogin(BuildContext context) {
-    final fullPhoneNumber = phoneController.text.trim();
+    final fullPhoneNumber = '91${phoneController.text.trim()}';
     print('Logging in with $fullPhoneNumber');
 
-    BlocProvider.of<LoginBloc>(context).add(fetchlogin(
+    BlocProvider.of<SendOtpBloc>(context).add(SendOtpRequested(
       phoneNumber: fullPhoneNumber,
     ));
   }
@@ -48,36 +49,35 @@ class _EnterScreenState extends State<EnterScreen> {
 
     return Consumer<LanguageService>(
       builder: (context, languageService, child) {
-        return BlocListener<LoginBloc, LoginState>(
+        return BlocListener<SendOtpBloc, SendOtpState>(
           listener: (context, state) async {
-            if (state is loginBlocLoaded) {
+            if (state is SendOtpSuccess) {
               // --- FIX: Stop loading ---
               setState(() {
                 isLoading = false;
               });
 
-              final token = state.login.accessToken;
-              final userType = state.login.user?.role;
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('token', token!);
-              await prefs.setString('userType', userType!);
-              print('token saved: $token');
+              // final token = state.login.accessToken;
+              // final userType = state.login.user?.role;
+              // final prefs = await SharedPreferences.getInstance();
+              // await prefs.setString('token', token!);
+              // await prefs.setString('userType', userType!);
+              // print('token saved: $token');
 
-              final String numberToSave = phoneController.text.trim();
-              await prefs.setString('number', numberToSave);
-              print('Number saved: $numberToSave');
+              // final String numberToSave = phoneController.text.trim();
+              // await prefs.setString('number', numberToSave);
+              // print('Number saved: $numberToSave');
 
               if (!mounted) return; // Check if widget is still mounted
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
                   builder: (context) => VerifyScreen(
-                    phoneNo:
-                        '${phoneController.text.trim()}',
+                    phoneNo: '${phoneController.text.trim()}',
                   ),
                 ),
               );
-            } else if (state is loginBlocError) {
+            } else if (state is SendOtpFailure) {
               // --- FIX: Stop loading ---
               setState(() {
                 isLoading = false;
@@ -95,7 +95,7 @@ class _EnterScreenState extends State<EnterScreen> {
                   backgroundColor: appColor.errorColor, // Use appColor
                 ),
               );
-            } else if (state is loginBlocLoading) {
+            } else if (state is SendOtpLoading) {
               // --- FIX: Start loading ---
               setState(() {
                 isLoading = true;

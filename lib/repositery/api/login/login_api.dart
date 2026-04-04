@@ -10,11 +10,12 @@ class Loginapi {
 
   Future<Loginmodel> getLogin({
     required String phoneNumber,
+    required String otp,
   }) async {
     try {
       final body = {
         "phoneNumber": phoneNumber.trim(),
-        "otp": "573201",
+        "otp": otp.trim(),
       };
 
       print(' Sending OTP request...');

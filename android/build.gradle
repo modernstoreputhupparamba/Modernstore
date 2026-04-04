@@ -6,7 +6,7 @@ buildscript {
     }
     dependencies {
         // Use AGP 8.3.2 or higher (8.2.1+ required for Java 21)
-        classpath "com.android.tools.build:gradle:8.3.2"
+        classpath "com.android.tools.build:gradle:8.1.0"
     }
 }
 

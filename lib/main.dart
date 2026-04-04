@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:modern_grocery/bloc/Banner_/DeleteBanner_bloc/delete_banner_bloc.dart';
 import 'package:modern_grocery/bloc/Categories_/GetAllCategories/get_all_categories_bloc.dart';
+import 'package:modern_grocery/bloc/Login_/Send_otp/send_otp_bloc.dart';
 import 'package:modern_grocery/bloc/Login_/verify/verify_bloc.dart';
 import 'package:modern_grocery/bloc/Orders/Get_All_Order/get_all_orders_bloc.dart';
 import 'package:modern_grocery/bloc/Product_/product%20delete/delete_product_bloc.dart';
@@ -77,9 +78,9 @@ class MyApp extends StatelessWidget {
                   BlocProvider(
                     create: (context) => LoginBloc(),
                   ),
-                  BlocProvider(
-                    create: (context) => VerifyBloc(),
-                  ),
+                  // BlocProvider(
+                  //   create: (context) => VerifyBloc(),
+                  // ),
                   BlocProvider(
                     create: (context) => GetAllCategoriesBloc(),
                   ),
@@ -187,6 +188,9 @@ class MyApp extends StatelessWidget {
 
                   BlocProvider(
                     create: (context) => UploadImageBloc(),
+                  ),
+                   BlocProvider(
+                    create: (context) => SendOtpBloc(),
                   ),
                   BlocProvider(
                       create: (context) => CreateOrderBloc(

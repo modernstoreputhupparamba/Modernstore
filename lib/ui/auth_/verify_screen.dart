@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:modern_grocery/bloc/Login_/verify/verify_bloc.dart';
-import 'package:modern_grocery/bloc/Login_/verify/verify_event.dart';
+import 'package:modern_grocery/bloc/Login_/Send_otp/send_otp_bloc.dart';
+import 'package:modern_grocery/bloc/Login_/login/login_bloc.dart';
 import 'package:modern_grocery/services/language_service.dart';
 import 'package:modern_grocery/ui/admin/admin_navibar.dart';
 import 'package:modern_grocery/ui/auth_/enter_screen.dart';
@@ -30,72 +30,40 @@ class VerifyScreen extends StatefulWidget {
 
 class _VerifyScreenState extends State<VerifyScreen> {
   final List<TextEditingController> otpControllers =
-      List.generate(6, (index) => TextEditingController());
+      List.generate(6, (_) => TextEditingController());
 
-  final List<FocusNode> focusNodes =
-      List.generate(6, (index) => FocusNode());
+  final List<FocusNode> focusNodes = List.generate(6, (_) => FocusNode());
 
   bool isLoading = false;
-  bool isAdmin = false;
-  bool isLoadingAdminStatus = true;
   String userId = '';
 
   @override
   void initState() {
     super.initState();
-    _checkAdminStatus();
+    _loadUserId();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) focusNodes[0].requestFocus();
     });
   }
 
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    userId = prefs.getString('userId') ?? '';
+  }
+
   @override
   void dispose() {
-    for (var controller in otpControllers) {
-      controller.dispose();
+    for (var c in otpControllers) {
+      c.dispose();
     }
-    for (var node in focusNodes) {
-      node.dispose();
+    for (var f in focusNodes) {
+      f.dispose();
     }
     super.dispose();
   }
 
-  String getOTP() {
-    return otpControllers.map((c) => c.text).join();
-  }
-
-  // ✅ Check Admin Status Safely
-  Future<void> _checkAdminStatus() async {
-    setState(() => isLoadingAdminStatus = true);
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final role = prefs.getString('role');
-      final userType = prefs.getString('userType');
-      final isAdminFlag = prefs.getBool('isAdmin');
-      userId = prefs.getString('userId') ?? '';
-
-      final bool isAdminResult = role?.toLowerCase() == 'admin' ||
-          userType?.toLowerCase() == 'admin' ||
-          isAdminFlag == true;
-
-      if (mounted) {
-        setState(() {
-          isAdmin = isAdminResult;
-          isLoadingAdminStatus = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          isAdmin = false;
-          isLoadingAdminStatus = false;
-        });
-      }
-    }
-  }
+  String getOTP() => otpControllers.map((c) => c.text).join();
 
   void _handleVerify(BuildContext context) {
     final otp = getOTP();
@@ -114,12 +82,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
       return;
     }
 
-    BlocProvider.of<VerifyBloc>(context).add(
-      fetchVerifyOTPEvent(
-        phoneNumber: widget.phoneNo,
-        otp: otp,
-      ),
-    );
+    context.read<LoginBloc>().add(
+          fetchlogin(
+            phoneNumber: '91${widget.phoneNo}',
+            otp: otp,
+          ),
+        );
   }
 
   void _handleResendOTP(BuildContext context) {
@@ -129,39 +97,52 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
     focusNodes[0].requestFocus();
 
-    BlocProvider.of<VerifyBloc>(context).add(
-      ResendOTPRequested(phoneNumber: widget.phoneNo),
-    );
+    context.read<SendOtpBloc>().add(
+          SendOtpRequested(phoneNumber: '91${widget.phoneNo}'),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<LanguageService>(
       builder: (context, languageService, child) {
-        return BlocListener<VerifyBloc, VerifyState>(
-          listener: (context, state) {
+        return BlocListener<LoginBloc, LoginState>(
+          listener: (context, state) async {
             ScaffoldMessenger.of(context).clearSnackBars();
 
-            if (state is VerifyLoading) {
+            if (state is loginBlocLoading) {
               setState(() => isLoading = true);
             }
 
-            if (state is VerifySuccess) {
+            if (state is loginBlocLoaded) {
               setState(() => isLoading = false);
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    languageService.getString('verification_success'),
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 1),
-                ),
-              );
+              final token = state.login.accessToken ?? '';
+              final userType = state.login.user?.role ?? '';
+              final userId = state.login.user?.id ?? '';
+              final role=state.login.user!.role;
 
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (!mounted) return;
+              final prefs = await SharedPreferences.getInstance();
 
+              final results = await Future.wait([
+                prefs.setString('token', token),
+                prefs.setString('userType', userType),
+                prefs.setString('role', role!),
+                prefs.setString('number', widget.phoneNo),
+                prefs.setString('userId', userId),
+                prefs.setBool('isLoggedIn', true),
+
+
+              ]);
+
+              final isSaved = !results.contains(false);
+
+              // 🔥 Determine admin AFTER saving
+              final bool isAdmin = userType?.toLowerCase() == 'admin';
+
+              if (!mounted) return;
+
+              if (isSaved) {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -176,10 +157,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
                     },
                   ),
                 );
-              });
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content:
+                        Text("Failed to save data locally. Please try again."),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             }
 
-            if (state is VerifyError) {
+            if (state is loginBlocError) {
               setState(() => isLoading = false);
 
               ScaffoldMessenger.of(context).showSnackBar(
@@ -194,19 +183,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
               }
 
               focusNodes[0].requestFocus();
-            }
-
-            if (state is OTPResent) {
-              setState(() => isLoading = false);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    languageService.getString('otp_resent'),
-                  ),
-                  backgroundColor: Colors.blue,
-                ),
-              );
             }
           },
           child: Scaffold(
@@ -233,7 +209,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 100.h),
-
                     Text(
                       languageService.getString('enter_verification_code'),
                       style: GoogleFonts.poppins(
@@ -242,9 +217,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-
                     SizedBox(height: 10.h),
-
                     Text(
                       '${languageService.getString('sent_to')} ${widget.phoneNo}',
                       style: GoogleFonts.poppins(
@@ -252,9 +225,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         fontSize: 17.sp,
                       ),
                     ),
-
                     SizedBox(height: 56.h),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) {
@@ -308,9 +279,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         );
                       }),
                     ),
-
                     SizedBox(height: 56.h),
-
                     Center(
                       child: GestureDetector(
                         onTap:
@@ -325,13 +294,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 40.h),
-
                     Center(
                       child: GestureDetector(
-                        onTap:
-                            isLoading ? null : () => _handleVerify(context),
+                        onTap: isLoading ? null : () => _handleVerify(context),
                         child: Container(
                           width: 281.w,
                           height: 54.h,
@@ -358,7 +324,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 40.h),
                   ],
                 ),

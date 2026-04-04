@@ -1,21 +1,27 @@
-part of 'verify_bloc.dart';
+// part of 'verify_bloc.dart';
 
-@immutable
-sealed class VerifyState {}
 
-final class VerifyInitial extends VerifyState {}
 
-final class VerifyLoading extends VerifyState {}
 
-final class VerifySuccess extends VerifyState {
-  final Loginmodel login;
-  VerifySuccess({required this.login});
-}
+// import 'package:flutter/material.dart';
+// import 'package:modern_grocery/repositery/model/login_model.dart' show Loginmodel;
 
-final class VerifyError extends VerifyState {
-  final String message;
+// @immutable
+// sealed class VerifyState {}
 
-  VerifyError({required this.message});
-}
+// final class VerifyInitial extends VerifyState {}
 
-final class OTPResent extends VerifyState {}
+// final class VerifyLoading extends VerifyState {}
+
+// final class VerifySuccess extends VerifyState {
+//   final Loginmodel login;
+//   VerifySuccess({required this.login});
+// }
+
+// final class VerifyError extends VerifyState {
+//   final String message;
+
+//   VerifyError({required this.message});
+// }
+
+// final class OTPResent extends VerifyState {}

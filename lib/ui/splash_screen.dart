@@ -25,6 +25,8 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    print(  'Checking login status...');
+    print(  'Token from prefs: "$token"');
 
     // --- ADD THIS LOGIC ---
     // Check for any of the admin flags, just like in VerifyScreen

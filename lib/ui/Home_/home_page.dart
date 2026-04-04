@@ -46,6 +46,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkTokenAndFetchData() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+     final role = prefs.getString('role');
+    final userType = prefs.getString('userType');
+    final isAdminFlag = prefs.getBool('isAdmin');
+   final UserId = prefs.getString('userId') ?? '';
     // print(
     //     ' [HomePage] Token check: ${token != null && token.isNotEmpty ? "Token exists (${token.substring(0, 20)}...)" : "NO TOKEN FOUND!"}');
 
@@ -62,6 +66,9 @@ class _HomePageState extends State<HomePage> {
         .add(FetchCategoryProducts(categoryId: '67fb1aa6b49a18abdf26144e'));
     BlocProvider.of<GetCategoryProductsBloc>(context)
         .add(FetchCategoryProducts(categoryId: '67ec290adaa2fb3cd2af3a2a'));
+        // print('Fetching token...$token');
+        // print('User role: $role');
+        // print('User type: $userType');
   }
 
   @override
