@@ -19,7 +19,7 @@ class UpdateCartBloc extends Bloc<UpdateCartEvent, UpdateCartState> {
   ) async {
     emit(UpdateCartLoading());
     try {
-      await updateCartApi.updateCartQuantity(event.productId, event.type);
+      await updateCartApi.updateCartQuantity(event.productId, event.quantity);
       emit(UpdateCartSuccess());
     } catch (e) {
       emit(UpdateCartError('Failed to update cart: $e'));

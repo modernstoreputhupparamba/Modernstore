@@ -57,7 +57,9 @@ class _CartPageState extends State<CartPage> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => NavigationBarWidget(initialIndex: 0,),
+                    builder: (context) => NavigationBarWidget(
+                      initialIndex: 0,
+                    ),
                   ),
                 );
               },
@@ -117,8 +119,7 @@ class _CartPageState extends State<CartPage> {
                   final cartModel =
                       context.read<GetAllUserCartBloc>().getAllUserCartModel;
 
-                  final List<Items> cartItems =
-                      cartModel?.data?.items ?? [];
+                  final List<Items> cartItems = cartModel?.data?.items ?? [];
 
                   // ✅ EMPTY CART UI
                   if (cartItems.isEmpty) {
@@ -146,7 +147,9 @@ class _CartPageState extends State<CartPage> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => NavigationBarWidget(initialIndex: 0,),
+                                  builder: (context) => NavigationBarWidget(
+                                    initialIndex: 0,
+                                  ),
                                 ),
                               );
                             },
@@ -192,6 +195,8 @@ class _CartPageState extends State<CartPage> {
                                   'quantity': item.quantity ?? 1,
                                   'price': item.itemAmount ?? 0,
                                   'mrp': item.product?.basePrice ?? 0,
+                                  'unit':
+                                    item.unit != null ? item.unit : null, // TODO: Update to `item.product?.unit` if your model has a unit field
                                 },
                                 languageService: languageService,
                               );
@@ -254,8 +259,17 @@ class _CartPageState extends State<CartPage> {
               ),
             ),
             Container(
+              width: 24.w,
+              height: 24.w,
+              margin: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: const BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Container(
               height: 38.h,
-              width: 90.w,
+              width: 110.w,
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(40.r),
@@ -328,8 +342,6 @@ class _CartPageState extends State<CartPage> {
               num totalMrp = 0.0;
               num deliveryCharge = 20.0; // Changed to num for reassignment
 
-
-
               if (state is GetAllUserCartLoaded) {
                 final cartModel =
                     context.read<GetAllUserCartBloc>().getAllUserCartModel;
@@ -338,12 +350,14 @@ class _CartPageState extends State<CartPage> {
                   totalPrice = cartModel.data?.totalAmount ?? 0.0;
 
                   for (final item in cartModel.data!.items!) {
-                    final basePrice = item.product?.basePrice?.toDouble() ?? 0.0;
+                    final basePrice =
+                        item.product?.basePrice?.toDouble() ?? 0.0;
                     final quantity = item.quantity ?? 0.0;
                     final discountedUnitPrice = item.discountedUnitPrice ?? 0.0;
 
                     totalMrp += basePrice * quantity;
-                    totalDiscount += (basePrice - discountedUnitPrice) * quantity;
+                    totalDiscount +=
+                        (basePrice - discountedUnitPrice) * quantity;
                   }
 
                   if ((totalPrice + deliveryCharge) > 250) {
@@ -356,8 +370,7 @@ class _CartPageState extends State<CartPage> {
                   _buildPriceRow(languageService.getString('price'),
                       '₹${totalMrp.toStringAsFixed(2)}', languageService),
                   _buildPriceRow(languageService.getString('discount'),
-                      '₹${totalDiscount.toStringAsFixed(2)}',
-                      languageService),
+                      '₹${totalDiscount.toStringAsFixed(2)}', languageService),
                   _buildPriceRow(languageService.getString('delivery_charge'),
                       '₹${deliveryCharge.toStringAsFixed(2)}', languageService),
                   Divider(color: Colors.white70, thickness: 1.h),
@@ -511,21 +524,72 @@ class FavouriteItemCard extends StatefulWidget {
 
 class _FavouriteItemCardState extends State<FavouriteItemCard> {
   late num count;
+  late TextEditingController _quantityController;
+  late FocusNode _focusNode;
+  bool isEditing = false;
 
   @override
   void initState() {
     super.initState();
     count = (widget.item['quantity'] as num?) ?? 1;
+    _quantityController = TextEditingController(text: count.toString());
+    _focusNode = FocusNode();
+
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        setState(() {
+          isEditing = false;
+        });
+        _submitQuantity(_quantityController.text);
+      }
+    });
   }
 
-  void _updateQuantity(BuildContext context, String? type, String productId) {
-    context.read<UpdateCartBloc>().add(UpdateCartQuantity(
-          productId: productId,
-          type: type!,
-        ));
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
-  bool isSelected = false;
+  @override
+  void didUpdateWidget(FavouriteItemCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item['quantity'] != widget.item['quantity']) {
+      count = (widget.item['quantity'] as num?) ?? 1;
+      if (!_focusNode.hasFocus) {
+        _quantityController.text = count.toString();
+      }
+    }
+  }
+
+  // void _updateQuantity(BuildContext context, String? type, String productId) {
+  //   context.read<UpdateCartBloc>().add(UpdateCartQuantity(
+  //         productId: productId,
+  //         type: type!,
+  //       ));
+  // }
+
+  void _submitQuantity(String value) {
+    num? parsed = num.tryParse(value);
+    if (parsed != null && parsed > 0 && parsed != count) {
+      setState(() {
+        count = parsed;
+        isEditing = false;
+      });
+      // TODO: You may need to modify the UpdateCartQuantity event in your BLoC to accept an exact 'quantity' parameter
+      context.read<UpdateCartBloc>().add(UpdateCartQuantity(
+            productId: widget.productId,
+            quantity: parsed,
+               // Replace with an appropriate type for exact value update
+          ));
+    } else {
+      setState(() {
+        isEditing = false;
+      });
+      _quantityController.text = count.toString();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -554,15 +618,15 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
             child: widget.item['image'] != null
                 ? (widget.item['image'].toString().startsWith('http')
                     ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12.r),
-                      child: Image.network(
+                        borderRadius: BorderRadius.circular(12.r),
+                        child: Image.network(
                           widget.item['image'],
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
                               Image.asset('assets/placeholder.png',
                                   fit: BoxFit.contain),
                         ),
-                    )
+                      )
                     : Image.asset(
                         widget.item['image'],
                         fit: BoxFit.contain,
@@ -601,7 +665,7 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
                         decoration: TextDecoration.lineThrough,
                       ),
                     ),
-                    SizedBox(width: 40.w),
+                    SizedBox(width: 10.w),
                     Text(
                       '₹${price.toStringAsFixed(0)}',
                       style: GoogleFonts.poppins(
@@ -623,54 +687,141 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
               ],
             ),
           ),
-          Container(
-            height: 38.h,
-            width: 90.w,
-            decoration: BoxDecoration(
-              color: Color(0xFFEFECE1),
-              borderRadius: BorderRadius.circular(40.r),
-            ),
+        
+          Padding(
+            padding:  EdgeInsets.only(bottom: 40.h),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              // mainAxisAlignment: MainAxisAlignment.center,
+              // crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    setState(() => count > 1 ? count-- : count = 1);
-                    _updateQuantity(context, 'decrease', widget.productId);
-                  },
-                  child: Icon(
-                    Icons.remove,
-                    color: Colors.black,
-                    size: 20.w,
+                Container(
+                  padding: EdgeInsets.zero,
+                  height: 38.h,
+                  width: 100.w,
+                  decoration: BoxDecoration(
+                    color: Color(0xFFEFECE1),
+                    borderRadius: BorderRadius.circular(40.r),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Spacer(),
+                      // GestureDetector(
+                      //   onTap: () {
+                      //     if (count > 1) {
+                      //       setState(() {
+                      //         count--;
+                      //         _quantityController.text = count.toString();
+                      //       });
+                      //       _updateQuantity(context, 'decrease', widget.productId);
+                      //     }
+                      //   },
+                      //   child: Container(
+                      //     padding: EdgeInsets.all(4.w),
+                      //     color: Colors.transparent,
+                      //     child: Icon(
+                      //       Icons.remove,
+                      //       color: Colors.black,
+                      //       size: 20.w,
+                      //     ),
+                      //   ),
+                      // ),
+                      // Spacer(),
+                      SizedBox(
+                        width: 60.w,
+                        child: TextField(
+                          readOnly: !isEditing,
+                          controller: _quantityController,
+                          focusNode: _focusNode,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: Colors.black,
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            isDense: true,
+                          ),
+                          onSubmitted: _submitQuantity,
+                        ),
+                      ),
+                      Spacer(),
+                      // GestureDetector(
+                      //   onTap: () {
+                      //     setState(() {
+                      //       count++;
+                      //       _quantityController.text = count.toString();
+                      //     });
+                      //     _updateQuantity(context, 'increase', widget.productId);
+                      //   },
+                      //   child: Container(
+                      //     padding: EdgeInsets.all(4.w),
+                      //     color: Colors.transparent,
+                      //     child: Icon(
+                      //       Icons.add,
+                      //       color: Colors.black,
+                      //       size: 20.w,
+                      //     ),
+                      //   ),
+                      // ),
+            
+                      if (widget.item['unit'] != null &&
+                          widget.item['unit'].toString().isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(top: 4.h, bottom: 4.h),
+                          child: Text(
+                            widget.item['unit'],
+                            style: GoogleFonts.poppins(
+                              color: const Color.fromARGB(206, 121, 121, 113),
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      Spacer(),
+                    ],
                   ),
                 ),
-                Spacer(),
-                Text(
-                  '$count',
-                  style: GoogleFonts.poppins(
-                    color: Colors.black,
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w500,
-                  ),
+                 GestureDetector(
+              onTap: () {
+                if (isEditing) {
+                  _focusNode.unfocus();
+                } else {
+                  setState(() {
+                    isEditing = true;
+                  });
+                  _focusNode.requestFocus();
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                color: Colors.transparent, // increases tap area
+                child:   isEditing ?Text('Apply',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFF5E9B5),
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  decoration: TextDecoration.underline,
+                  decorationColor: const Color(0xFFF5E9B5),
                 ),
-                Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    setState(() => count++);
-                    _updateQuantity(context, 'increase', widget.productId);
-                  },
-                  child: Icon(
-                    Icons.add,
-                    color: Colors.black,
-                    size: 20.w,
-                  ),
+              
+                
+                ):Icon(
+                  Icons.edit,
+                  color:  const Color(0xFFF5E9B5),
+                  size: 16.w,
                 ),
-                Spacer(),
+              ),
+            ),
               ],
             ),
           ),
-          SizedBox(width: 10.w),
+           
+          // SizedBox(width: 10.w),
         ],
       ),
     );
@@ -718,8 +869,17 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
               ),
             ),
             Container(
+              width: 24.w,
+              height: 24.w,
+              margin: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: const BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Container(
               height: 38.h,
-              width: 90.w,
+              width: 110.w,
               decoration: BoxDecoration(
                 color: Colors.black,
                 borderRadius: BorderRadius.circular(40.r),

@@ -5,8 +5,8 @@ sealed class UpdateCartEvent {}
 
 class UpdateCartQuantity extends UpdateCartEvent {
   final String productId;
-  final String type;
+  final num quantity;
 
 
-  UpdateCartQuantity({required this.productId, required this.type});
+  UpdateCartQuantity({required this.productId, required this.quantity});
 }

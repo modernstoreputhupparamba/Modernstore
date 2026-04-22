@@ -52,7 +52,7 @@ import 'repositery/api/User/GetUserDlvAddresses_api.dart';
 import 'repositery/api/Orders/Create_order_Api.dart';
 import 'bloc/User/Edit_profile/edit_profile_bloc.dart';
 
-String basePath = "http://72.60.102.197:4055/api";
+String basePath = "https://modern-store-backend.onrender.com/api";
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

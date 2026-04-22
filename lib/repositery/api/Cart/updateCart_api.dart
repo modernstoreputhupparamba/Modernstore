@@ -10,8 +10,8 @@ class UpdateCartApi {
   UpdateCartApi({required this.apiClient});
 
   Future<UpdateCartResponse> updateCartQuantity(
-      String productId, String type) async {
-    final String path = '/cart/user/cartItem/quantity/$type';
+      String productId, num quantity) async {
+    final String path = '/cart/user/cartItem/quantity/update';
 
     if (productId.isEmpty || productId.length != 24) {
       throw Exception('Invalid product ID');
@@ -19,6 +19,7 @@ class UpdateCartApi {
 
     final Map<String, dynamic> body = {
       'productId': productId,
+      'quantity': quantity,
     };
 
     try {
