@@ -174,6 +174,8 @@ class AppLocalizations {
 
       // Search & Products
       'find_products': 'Find Products',
+      'no_categories_found': 'No categories found',
+      'no_products_found': 'No products found',
       'search_something': 'Search something...',
       'categories_not_recognized': 'Categories not Recognized',
       'no_name': 'No Name',

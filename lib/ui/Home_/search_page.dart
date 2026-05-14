@@ -218,35 +218,39 @@ void _onSearchChanged() {
             borderRadius: BorderRadius.circular(10.r),
           ),
           child: Column( //
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              ClipRRect(
-                  borderRadius: BorderRadius.circular(10.r),
-                child: CachedNetworkImage( // Use CachedNetworkImage
-                  imageUrl: imageUrl,
-                  height: 128.h,
-                  width: 160.w,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors( // Shimmer placeholder
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(color: Colors.white),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+                  child: CachedNetworkImage( // Use CachedNetworkImage
+                    imageUrl: imageUrl,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Shimmer.fromColors( // Shimmer placeholder
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(color: Colors.white),
+                    ),
+                    // errorBuilder: (context, error, stackTrace) {
+                    //   return const Icon(Icons.broken_image, color: Colors.grey); // Error icon
+                    // },
                   ),
-                  // errorBuilder: (context, error, stackTrace) {
-                  //   return const Icon(Icons.broken_image, color: Colors.grey); // Error icon
-                  // },
                 ),
               ),
-              SizedBox(height: 13.h),
+              SizedBox(height: 8.h),
               Padding(
-                padding: EdgeInsets.symmetric(horizontal: 27.w),
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: Text(
                   title,
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                       fontSize: 14.sp, fontWeight: FontWeight.w500),
                 ),
               ),
+              SizedBox(height: 8.h),
             ],
           ),
         ),

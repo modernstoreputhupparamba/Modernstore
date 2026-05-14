@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:modern_grocery/bloc/cart_/GetAllUserCart/get_all_user_cart_bloc.dart';
 import 'package:modern_grocery/services/language_service.dart';
@@ -11,6 +12,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../bloc/cart_/Update_cart/update_cart_bloc.dart';
 import '../../repositery/model/Cart/getAllUserCart_model.dart';
+import '../../bloc/cart_/removev cart item/remove_cart_item_bloc.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -82,22 +84,43 @@ class _CartPageState extends State<CartPage> {
             ],
           ),
           backgroundColor: const Color(0XFF0A0909),
-          body: BlocListener<UpdateCartBloc, UpdateCartState>(
-            listener: (context, state) {
-              if (state is UpdateCartSuccess) {
-                // Refresh the cart list after a successful update
-                context
-                    .read<GetAllUserCartBloc>()
-                    .add(fetchGetAllUserCartEvent());
-              } else if (state is UpdateCartError) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(state.message),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
+          body: MultiBlocListener(
+            listeners: [
+              BlocListener<UpdateCartBloc, UpdateCartState>(
+                listener: (context, state) {
+                  if (state is UpdateCartSuccess) {
+                    // Refresh the cart list after a successful update
+                    context
+                        .read<GetAllUserCartBloc>()
+                        .add(fetchGetAllUserCartEvent());
+                  } else if (state is UpdateCartError) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.message),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+              ),
+              BlocListener<RemoveCartItemBloc, RemoveCartItemState>(
+                listener: (context, state) {
+                  if (state is RemoveCartItemSuccess) {
+                    // Refresh the cart list after a successful deletion
+                    context
+                        .read<GetAllUserCartBloc>()
+                        .add(fetchGetAllUserCartEvent());
+                  } else if (state is RemoveCartItemFailure) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.error),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
             child: BlocBuilder<GetAllUserCartBloc, GetAllUserCartState>(
               builder: (context, state) {
                 if (state is GetAllUserCartLoading) {
@@ -193,7 +216,7 @@ class _CartPageState extends State<CartPage> {
                                       ? item.product!.images!.first
                                       : null,
                                   'quantity': item.quantity ?? 1,
-                                  'price': item.itemAmount ?? 0,
+                                  'price': item.discountedUnitPrice ?? 0,
                                   'mrp': item.product?.basePrice ?? 0,
                                   'unit':
                                     item.unit != null ? item.unit : null, // TODO: Update to `item.product?.unit` if your model has a unit field
@@ -606,8 +629,10 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
         borderRadius: BorderRadius.circular(10.r),
         border: Border.all(color: const Color(0xDBFCF8E8), width: 1.w),
       ),
-      child: Row(
+      child: Stack(
         children: [
+          Row(
+            children: [
           Container(
             width: 106.w,
             height: 110.h,
@@ -822,6 +847,28 @@ class _FavouriteItemCardState extends State<FavouriteItemCard> {
           ),
            
           // SizedBox(width: 10.w),
+            ],
+          ),
+          Positioned(
+            bottom: 4.h,
+            right: 8.w,
+            child: GestureDetector(
+              onTap: () {
+                context.read<RemoveCartItemBloc>().add(RemoveItemEvent(
+                      productId: widget.productId,
+                    ));
+              },
+              child: CircleAvatar(
+                    radius: 14.r,
+                    backgroundColor: const Color(0xFFEFECE1),
+                    child: SvgPicture.asset(
+                      'assets/Icon/trash-2.svg',
+                      width: 16.w,
+                      height: 16.h,
+                    ),
+                  ),
+            ),
+          ),
         ],
       ),
     );

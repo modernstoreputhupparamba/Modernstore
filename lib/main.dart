@@ -18,6 +18,7 @@ import 'package:modern_grocery/bloc/GetById/getbyid_bloc.dart';
 import 'package:modern_grocery/bloc/Categories_/GetCategoryProducts/get_category_products_bloc.dart';
 import 'package:modern_grocery/bloc/wishList/GetToWishlist_bloc/get_to_wishlist_bloc.dart';
 import 'package:modern_grocery/bloc/cart_/addCart_bloc/add_cart_bloc.dart';
+import 'package:modern_grocery/repositery/api/Cart/remove_cart_item_api.dart';
 import 'package:modern_grocery/bloc/delivery_/addDeliveryAddress/add_delivery_address_bloc.dart';
 import 'package:modern_grocery/bloc/Product_/Get_All_Product_by_categorId/get_all_product_by_category_id_bloc.dart';
 import 'package:modern_grocery/bloc/Categories_/createCategory/create_category_bloc.dart';
@@ -48,6 +49,7 @@ import 'bloc/Stocks/GetAll_Inventory/get_all_stock_bloc.dart';
 import 'bloc/Stocks/create_stock/add_stock_bloc.dart';
 import 'bloc/Categories_/Edit_category/edit_category_bloc.dart';
 import 'bloc/cart_/Update_cart/update_cart_bloc.dart';
+import 'bloc/cart_/removev cart item/remove_cart_item_bloc.dart';
 import 'repositery/api/User/GetUserDlvAddresses_api.dart';
 import 'repositery/api/Orders/Create_order_Api.dart';
 import 'bloc/User/Edit_profile/edit_profile_bloc.dart';
@@ -90,6 +92,11 @@ class MyApp extends StatelessWidget {
                   BlocProvider(
                     create: (context) => AddCartBloc(
                       addCartApi: AddCartApi(apiClient: ApiClient()),
+                    ),
+                  ),
+                  BlocProvider(
+                    create: (context) => RemoveCartItemBloc(
+                      api: RemoveCartItemApi(),
                     ),
                   ),
                   BlocProvider(
